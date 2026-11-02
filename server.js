@@ -227,11 +227,11 @@ const server = http.createServer(async (req, res) => {
   res.end('405 Method Not Allowed');
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`===============================================`);
   console.log(` MyOnlineC - Modern Online C Compiler Server   `);
   console.log(`===============================================`);
-  console.log(` Server running at: http://localhost:${PORT}`);
+  console.log(` Server running at: http://0.0.0.0:${PORT}`);
   console.log(` API Key Status   : ${API_KEY ? 'Active (Loaded)' : 'Missing'}`);
   console.log(` Default Compiler : GCC 15`);
   console.log(`===============================================`);
