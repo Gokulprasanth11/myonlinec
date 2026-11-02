@@ -606,19 +606,24 @@ html, body {
   display: block;
 }
 
-/* Terminal Console */
-.terminal-text {
+/* Terminal Scroll Area & CLI Prompt */
+.terminal-scroll-area {
   width: 100%;
   height: 100%;
   padding: 10px 14px;
+  background-color: #141414;
+  overflow-y: auto;
   font-family: var(--vscode-mono);
   font-size: 13px;
   line-height: 1.5;
-  background-color: #141414;
+  display: flex;
+  flex-direction: column;
+}
+
+.terminal-text {
   color: #cccccc;
   white-space: pre-wrap;
   word-break: break-all;
-  overflow-y: auto;
 }
 
 .terminal-placeholder {
@@ -632,6 +637,213 @@ html, body {
 
 .stderr-line {
   color: var(--color-error);
+}
+
+.terminal-prompt-line {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+  font-family: var(--vscode-mono);
+  font-size: 13px;
+}
+
+.prompt-user {
+  color: #4ec9b0;
+  font-weight: 600;
+}
+
+.prompt-path {
+  color: #569cd6;
+}
+
+.terminal-cli-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ffffff;
+  font-family: var(--vscode-mono);
+  font-size: 13px;
+  padding: 0 4px;
+}
+
+.terminal-cli-input::placeholder {
+  color: #555555;
+  font-style: italic;
+}
+
+/* GitHub Button */
+.titlebar-btn.github-btn {
+  background-color: #24292e;
+  border-color: #444d56;
+  color: #f0f6fc;
+}
+
+.titlebar-btn.github-btn:hover {
+  background-color: #2f363d;
+  border-color: #606a74;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+.modal-box {
+  width: 480px;
+  max-width: 90vw;
+  background-color: #252526;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: var(--vscode-font);
+}
+
+.modal-header {
+  height: 42px;
+  background-color: #2d2d2d;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-bright);
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: #ffffff;
+}
+
+.modal-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-group label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.form-group input {
+  background-color: #1e1e1e;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  color: #ffffff;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  font-family: var(--vscode-font);
+  outline: none;
+}
+
+.form-group input:focus {
+  border-color: var(--accent-blue-active);
+}
+
+.field-help {
+  font-size: 11px;
+  color: #777777;
+}
+
+.field-help a {
+  color: var(--accent-blue-active);
+  text-decoration: none;
+}
+
+.field-help a:hover {
+  text-decoration: underline;
+}
+
+.modal-footer {
+  padding: 12px 16px;
+  background-color: #202020;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.gh-status {
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.gh-status.hidden {
+  display: none;
+}
+
+.gh-status.info {
+  background-color: rgba(0, 122, 204, 0.15);
+  border: 1px solid rgba(0, 122, 204, 0.4);
+  color: #75beff;
+}
+
+.gh-status.success {
+  background-color: rgba(137, 209, 133, 0.15);
+  border: 1px solid rgba(137, 209, 133, 0.4);
+  color: var(--color-success);
+}
+
+.gh-status.error {
+  background-color: rgba(244, 135, 113, 0.15);
+  border: 1px solid rgba(244, 135, 113, 0.4);
+  color: var(--color-error);
+}
+
+.gh-status a {
+  color: #ffffff;
+  font-weight: 600;
 }
 
 /* Stdin Box */

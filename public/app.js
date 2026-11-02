@@ -1,4 +1,4 @@
-// MyOnlineC - Clean VS Code-style IDE
+// MyOnlineC - VS Code Web IDE with Terminal CLI & GitHub Sync
 (function () {
   'use strict';
 
@@ -285,12 +285,16 @@ int main() {
     }
   };
 
-  // State
-  let vfs = JSON.parse(JSON.stringify(SAMPLES.folders_project.vfs));
+  // State Management with LocalStorage persistence
+  const savedVfs = localStorage.getItem('myonlinec_vfs');
+  let vfs = savedVfs ? JSON.parse(savedVfs) : JSON.parse(JSON.stringify(SAMPLES.folders_project.vfs));
   let expandedFolders = new Set(['include', 'src']);
-  let openTabs = ['main.c', 'include/math_utils.h'];
+  let openTabs = ['main.c'];
+  if (vfs['include/math_utils.h']) openTabs.push('include/math_utils.h');
   let activeFilePath = 'main.c';
   let monacoEditor = null;
+  let cliHistory = [];
+  let cliHistoryIdx = -1;
 
   // DOM Elements
   const sampleSelect = document.getElementById('sample-select');
@@ -305,6 +309,8 @@ int main() {
   const monacoContainer = document.getElementById('monaco-container');
   const fallbackEditor = document.getElementById('fallback-editor');
   const outputTerminal = document.getElementById('output-terminal');
+  const terminalScrollArea = document.getElementById('terminal-scroll-area');
+  const terminalCliInput = document.getElementById('terminal-cli-input');
   const stdinInput = document.getElementById('stdin-input');
   const statusCursor = document.getElementById('status-cursor');
   const statusLangText = document.getElementById('status-lang-text');
@@ -321,6 +327,38 @@ int main() {
   const hidePanelBtn = document.getElementById('hide-panel-btn');
   const sidebar = document.getElementById('sidebar');
   const bottomPanel = document.getElementById('bottom-panel');
+
+  // GitHub Modal Elements
+  const githubModalBtn = document.getElementById('github-modal-btn');
+  const githubModal = document.getElementById('github-modal');
+  const closeModalBtn = document.getElementById('close-modal-btn');
+  const cancelGhBtn = document.getElementById('cancel-gh-btn');
+  const submitGhBtn = document.getElementById('submit-gh-btn');
+  const ghToken = document.getElementById('gh-token');
+  const ghOwner = document.getElementById('gh-owner');
+  const ghRepo = document.getElementById('gh-repo');
+  const ghBranch = document.getElementById('gh-branch');
+  const ghMessage = document.getElementById('gh-message');
+  const ghStatus = document.getElementById('gh-status');
+
+  // Load saved GitHub credentials from localStorage
+  if (localStorage.getItem('myonlinec_gh_token')) {
+    ghToken.value = localStorage.getItem('myonlinec_gh_token');
+  }
+  if (localStorage.getItem('myonlinec_gh_owner')) {
+    ghOwner.value = localStorage.getItem('myonlinec_gh_owner');
+  }
+  if (localStorage.getItem('myonlinec_gh_repo')) {
+    ghRepo.value = localStorage.getItem('myonlinec_gh_repo');
+  }
+
+  function saveVfs() {
+    try {
+      localStorage.setItem('myonlinec_vfs', JSON.stringify(vfs));
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
+  }
 
   // Helpers
   function getBasename(path) {
@@ -447,6 +485,7 @@ int main() {
 
     if (vfs[activeFilePath] && vfs[activeFilePath].type === 'file') {
       vfs[activeFilePath].content = getEditorValue();
+      saveVfs();
     }
 
     if (!openTabs.includes(path)) {
@@ -515,7 +554,7 @@ int main() {
   }
 
   // New File Creator
-  function promptNewFile(parentFolder = '') {
+  function promptNewFile(parentFolder = '', initialContent = '') {
     const defaultName = parentFolder ? `${parentFolder}/utils.h` : 'helper.h';
     const filePath = prompt('Enter new file name (or path with folder):', defaultName);
     if (!filePath) return;
@@ -546,27 +585,29 @@ int main() {
     vfs[trimmed] = {
       type: 'file',
       parent: parentOfNewFile,
-      content: trimmed.endsWith('.h') ? `#ifndef ${getBasename(trimmed).toUpperCase().replace(/[^A-Z0-9]/g, '_')}\n#define ${getBasename(trimmed).toUpperCase().replace(/[^A-Z0-9]/g, '_')}\n\n// Header declarations\n\n#endif\n` : ''
+      content: initialContent || (trimmed.endsWith('.h') ? `#ifndef ${getBasename(trimmed).toUpperCase().replace(/[^A-Z0-9]/g, '_')}\n#define ${getBasename(trimmed).toUpperCase().replace(/[^A-Z0-9]/g, '_')}\n\n// Header declarations\n\n#endif\n` : '')
     };
 
+    saveVfs();
     openFile(trimmed);
   }
 
   // New Folder Creator
-  function promptNewFolder() {
-    const folderName = prompt('Enter new folder name (e.g. include, src, tests):');
+  function promptNewFolder(folderNameArg) {
+    const folderName = folderNameArg || prompt('Enter new folder name (e.g. include, src, tests):');
     if (!folderName) return;
 
     const trimmed = folderName.trim().replace(/^[\/\\]+|[\/\\]+$/g, '');
     if (!trimmed) return;
 
     if (vfs[trimmed]) {
-      alert(`Folder "${trimmed}" already exists.`);
+      if (!folderNameArg) alert(`Folder "${trimmed}" already exists.`);
       return;
     }
 
     vfs[trimmed] = { type: 'folder', parent: '' };
     expandedFolders.add(trimmed);
+    saveVfs();
     renderFileTree();
   }
 
@@ -592,6 +633,7 @@ int main() {
       closeTab(path);
     }
 
+    saveVfs();
     renderFileTree();
   }
 
@@ -649,6 +691,13 @@ int main() {
           statusCursor.textContent = `Ln ${e.position.lineNumber}, Col ${e.position.column}`;
         });
 
+        monacoEditor.onDidChangeModelContent(() => {
+          if (vfs[activeFilePath]) {
+            vfs[activeFilePath].content = monacoEditor.getValue();
+            saveVfs();
+          }
+        });
+
         monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, function () {
           runCode();
         });
@@ -671,6 +720,9 @@ int main() {
       tab.classList.add('active');
       const targetId = `pane-${tab.dataset.tab}`;
       document.getElementById(targetId)?.classList.add('active');
+      if (tab.dataset.tab === 'terminal') {
+        terminalCliInput?.focus();
+      }
     });
   });
 
@@ -685,26 +737,33 @@ int main() {
     });
   }
 
+  function appendTerminal(html) {
+    outputTerminal.innerHTML += html;
+    terminalScrollArea.scrollTop = terminalScrollArea.scrollHeight;
+  }
+
   // Code Execution Engine
-  async function runCode() {
+  async function runCode(customFile) {
     if (vfs[activeFilePath]) {
       vfs[activeFilePath].content = getEditorValue();
+      saveVfs();
     }
 
-    const mainFile = vfs['main.c'] || vfs[activeFilePath];
+    const targetPath = customFile || activeFilePath || 'main.c';
+    const mainFile = vfs[targetPath] || vfs['main.c'];
     const mainCode = mainFile?.content || '';
     const compiler = compilerSelect.value || 'gcc-15';
     const input = stdinInput.value;
 
     if (!mainCode.trim()) {
-      alert('Please enter C code to compile.');
+      alert(`No C code found to compile in "${targetPath}".`);
       return;
     }
 
     // Collect all secondary files
     const secondaryFiles = [];
     for (const [path, item] of Object.entries(vfs)) {
-      if (item.type === 'file' && path !== 'main.c') {
+      if (item.type === 'file' && path !== targetPath) {
         secondaryFiles.push({
           name: getBasename(path),
           content: item.content
@@ -715,7 +774,8 @@ int main() {
     runBtn.disabled = true;
     bottomPanel?.classList.remove('collapsed');
     switchPanelTab('terminal');
-    outputTerminal.innerHTML = '<span class="stdout-line">Compiling and running...</span>';
+
+    appendTerminal(`\n<span class="stdout-line">[Compiling ${getBasename(targetPath)} with ${compiler}...]</span>\n`);
     statusStatusText.innerHTML = '<i class="codicon codicon-sync"></i><span>Compiling...</span>';
 
     try {
@@ -745,10 +805,10 @@ int main() {
         outputHtml += `<span class="stderr-line">${escapeHtml(stderr)}</span>`;
       }
       if (!stdout && !stderr) {
-        outputHtml = '<span class="terminal-placeholder">[Program terminated with no output]</span>';
+        outputHtml = '<span class="terminal-placeholder">[Program terminated with no output]</span>\n';
       }
 
-      outputTerminal.innerHTML = outputHtml;
+      appendTerminal(outputHtml);
 
       // Update Metrics
       metricStatus.textContent = isSuccess ? 'Success' : `Exit ${exitCode}`;
@@ -772,14 +832,241 @@ int main() {
         : '<i class="codicon codicon-error"></i><span>Build Failed</span>';
 
     } catch (err) {
-      outputTerminal.innerHTML = `<span class="stderr-line">Network error: ${escapeHtml(err.message)}</span>`;
+      appendTerminal(`<span class="stderr-line">Network error: ${escapeHtml(err.message)}</span>\n`);
       metricStatus.textContent = 'Error';
       metricStatus.className = 'meta-badge error';
       statusStatusText.innerHTML = '<i class="codicon codicon-error"></i><span>Error</span>';
     } finally {
       runBtn.disabled = false;
+      terminalCliInput?.focus();
     }
   }
+
+  // Interactive Terminal Command Line Handler
+  terminalCliInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const cmdRaw = terminalCliInput.value.trim();
+      terminalCliInput.value = '';
+      if (!cmdRaw) return;
+
+      cliHistory.push(cmdRaw);
+      cliHistoryIdx = cliHistory.length;
+
+      appendTerminal(`<div class="terminal-prompt-line"><span class="prompt-user">gokul@myonlinec</span>:<span class="prompt-path">~/project</span>$&nbsp;<span>${escapeHtml(cmdRaw)}</span></div>`);
+
+      executeCliCommand(cmdRaw);
+    } else if (e.key === 'ArrowUp') {
+      if (cliHistory.length > 0 && cliHistoryIdx > 0) {
+        cliHistoryIdx--;
+        terminalCliInput.value = cliHistory[cliHistoryIdx];
+      }
+    } else if (e.key === 'ArrowDown') {
+      if (cliHistory.length > 0 && cliHistoryIdx < cliHistory.length - 1) {
+        cliHistoryIdx++;
+        terminalCliInput.value = cliHistory[cliHistoryIdx];
+      } else {
+        cliHistoryIdx = cliHistory.length;
+        terminalCliInput.value = '';
+      }
+    }
+  });
+
+  function executeCliCommand(cmdLine) {
+    const parts = cmdLine.split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+    const arg1 = parts[1];
+    const arg2 = parts[2];
+
+    switch (cmd) {
+      case 'help':
+        appendTerminal(`
+<span class="stdout-line">Available Terminal Commands:</span>
+  <span class="prompt-user">run [file]</span>       - Compile & run main.c or specific application
+  <span class="prompt-user">git push</span>         - Push all project files & folders to GitHub
+  <span class="prompt-user">git status</span>       - View files in virtual project tree
+  <span class="prompt-user">ls / dir</span>         - List files and folders
+  <span class="prompt-user">mkdir &lt;folder&gt;</span>    - Create new folder in project
+  <span class="prompt-user">touch &lt;file&gt;</span>      - Create new file in project
+  <span class="prompt-user">cat &lt;file&gt;</span>        - Display contents of a file
+  <span class="prompt-user">clear</span>            - Clear terminal output
+\n`);
+        break;
+
+      case 'run':
+        runCode(arg1);
+        break;
+
+      case 'clear':
+        outputTerminal.innerHTML = '';
+        break;
+
+      case 'ls':
+      case 'dir':
+        const fileNames = Object.keys(vfs).sort();
+        let listOut = '<div style="margin: 4px 0;">';
+        fileNames.forEach(name => {
+          const isDir = vfs[name].type === 'folder';
+          listOut += `<span style="display:inline-block; margin-right: 18px; color: ${isDir ? '#e8a838' : '#519aba'};">${escapeHtml(name)}${isDir ? '/' : ''}</span>`;
+        });
+        listOut += '</div>\n';
+        appendTerminal(listOut);
+        break;
+
+      case 'git':
+        if (arg1 === 'status') {
+          appendTerminal(`
+<span class="stdout-line">On branch main</span>
+<span class="stdout-line">Project files tracked (${Object.keys(vfs).length}):</span>
+${Object.keys(vfs).map(p => `  <span style="color: #89d185;">${escapeHtml(p)}</span>`).join('\n')}
+\n`);
+        } else if (arg1 === 'push') {
+          openGitHubModal();
+        } else if (arg1 === 'commit') {
+          appendTerminal('<span class="stdout-line">[main (root-commit)] Changes staged in browser VFS. Type "git push" to sync with GitHub.</span>\n');
+        } else {
+          appendTerminal(`<span class="stderr-line">git: '${escapeHtml(arg1 || '')}' is not a supported git command. Try "git push" or "git status".</span>\n`);
+        }
+        break;
+
+      case 'mkdir':
+        if (!arg1) {
+          appendTerminal('<span class="stderr-line">mkdir: missing operand</span>\n');
+        } else {
+          promptNewFolder(arg1);
+          appendTerminal(`<span class="stdout-line">Created directory: ${escapeHtml(arg1)}</span>\n`);
+        }
+        break;
+
+      case 'touch':
+        if (!arg1) {
+          appendTerminal('<span class="stderr-line">touch: missing file operand</span>\n');
+        } else {
+          vfs[arg1] = { type: 'file', parent: arg1.includes('/') ? arg1.split('/')[0] : '', content: '' };
+          saveVfs();
+          renderFileTree();
+          openFile(arg1);
+          appendTerminal(`<span class="stdout-line">Created file: ${escapeHtml(arg1)}</span>\n`);
+        }
+        break;
+
+      case 'cat':
+        if (!arg1 || !vfs[arg1]) {
+          appendTerminal(`<span class="stderr-line">cat: ${escapeHtml(arg1 || '')}: No such file</span>\n`);
+        } else if (vfs[arg1].type === 'folder') {
+          appendTerminal(`<span class="stderr-line">cat: ${escapeHtml(arg1)}: Is a directory</span>\n`);
+        } else {
+          appendTerminal(`<pre class="stdout-line">${escapeHtml(vfs[arg1].content || '(empty)')}</pre>\n`);
+        }
+        break;
+
+      default:
+        appendTerminal(`<span class="stderr-line">command not found: ${escapeHtml(cmd)}. Type "help" for list of commands.</span>\n`);
+        break;
+    }
+  }
+
+  // GitHub Modal & Push Handler
+  function openGitHubModal() {
+    githubModal.classList.remove('hidden');
+    ghStatus.className = 'gh-status hidden';
+    ghStatus.innerHTML = '';
+    ghRepo.focus();
+  }
+
+  function closeGitHubModal() {
+    githubModal.classList.add('hidden');
+  }
+
+  githubModalBtn?.addEventListener('click', openGitHubModal);
+  closeModalBtn?.addEventListener('click', closeGitHubModal);
+  cancelGhBtn?.addEventListener('click', closeGitHubModal);
+
+  submitGhBtn?.addEventListener('click', async () => {
+    const token = ghToken.value.trim();
+    const owner = ghOwner.value.trim();
+    const repo = ghRepo.value.trim();
+    const branch = ghBranch.value.trim() || 'main';
+    const message = ghMessage.value.trim() || 'Commit from MyOnlineC IDE';
+
+    if (!token) {
+      alert('Please enter your GitHub Personal Access Token (PAT).');
+      ghToken.focus();
+      return;
+    }
+    if (!owner) {
+      alert('Please enter your GitHub Username.');
+      ghOwner.focus();
+      return;
+    }
+    if (!repo) {
+      alert('Please enter a Repository Name.');
+      ghRepo.focus();
+      return;
+    }
+
+    // Save in localStorage for future convenience
+    localStorage.setItem('myonlinec_gh_token', token);
+    localStorage.setItem('myonlinec_gh_owner', owner);
+    localStorage.setItem('myonlinec_gh_repo', repo);
+
+    // Save active editor value
+    if (vfs[activeFilePath]) {
+      vfs[activeFilePath].content = getEditorValue();
+      saveVfs();
+    }
+
+    // Gather all files from VFS
+    const filesToPush = [];
+    for (const [path, item] of Object.entries(vfs)) {
+      if (item.type === 'file') {
+        filesToPush.push({
+          path: path,
+          content: item.content || ''
+        });
+      }
+    }
+
+    submitGhBtn.disabled = true;
+    ghStatus.className = 'gh-status info';
+    ghStatus.innerHTML = '<i class="codicon codicon-sync"></i> Pushing all files and folders to GitHub...';
+
+    try {
+      const response = await fetch('/api/github/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,
+          owner,
+          repo,
+          branch,
+          message,
+          files: filesToPush
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        ghStatus.className = 'gh-status error';
+        ghStatus.innerHTML = `<strong>Error:</strong> ${escapeHtml(result.error || 'Failed to push to GitHub')}`;
+        submitGhBtn.disabled = false;
+        return;
+      }
+
+      ghStatus.className = 'gh-status success';
+      ghStatus.innerHTML = `🎉 <strong>Successfully pushed!</strong><br>
+        View on GitHub: <a href="${escapeHtml(result.repoUrl)}" target="_blank">${escapeHtml(result.repoUrl)}</a><br>
+        Commit: <a href="${escapeHtml(result.commitUrl)}" target="_blank">${result.commitSha.substring(0, 7)}</a>`;
+
+      appendTerminal(`\n<span class="stdout-line">🎉 Successfully pushed ${filesToPush.length} files to <a href="${result.repoUrl}" target="_blank" style="color:#569cd6;">${result.repoUrl}</a></span>\n`);
+
+    } catch (err) {
+      ghStatus.className = 'gh-status error';
+      ghStatus.innerHTML = `<strong>Network Error:</strong> ${escapeHtml(err.message)}`;
+    } finally {
+      submitGhBtn.disabled = false;
+    }
+  });
 
   function escapeHtml(str) {
     if (!str) return '';
@@ -798,6 +1085,7 @@ int main() {
       if (sample.compiler) compilerSelect.value = sample.compiler;
       setEditorValue(vfs['main.c']?.content || '', 'main.c');
       stdinInput.value = sample.stdin || '';
+      saveVfs();
       renderFileTree();
       renderTabs();
     }
@@ -810,9 +1098,9 @@ int main() {
 
   // Toolbar Actions
   btnNewFile.addEventListener('click', () => promptNewFile(''));
-  btnNewFolder.addEventListener('click', promptNewFolder);
+  btnNewFolder.addEventListener('click', () => promptNewFolder(''));
 
-  runBtn.addEventListener('click', runCode);
+  runBtn.addEventListener('click', () => runCode());
 
   downloadBtn.addEventListener('click', () => {
     if (vfs[activeFilePath]) {

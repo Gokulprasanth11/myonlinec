@@ -207,6 +207,163 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // API GitHub Push Endpoint
+  if (req.method === 'POST' && pathname === '/api/github/push') {
+    try {
+      const payload = await readRequestBody(req);
+      const { token, owner, repo, branch = 'main', message = 'Update from MyOnlineC IDE', files = [] } = payload;
+
+      if (!token || !owner || !repo) {
+        sendJson(res, 400, {
+          success: false,
+          error: 'Missing required fields: GitHub Personal Access Token, Owner/Username, and Repo Name are required.'
+        });
+        return;
+      }
+
+      if (!files.length) {
+        sendJson(res, 400, {
+          success: false,
+          error: 'No files provided to commit.'
+        });
+        return;
+      }
+
+      const headers = {
+        'Authorization': `Bearer ${token.trim()}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'MyOnlineC-Web-IDE'
+      };
+
+      // 1. Check if repository exists; if 404, try creating it automatically
+      const repoCheck = await fetch(`https://api.github.com/repos/${owner.trim()}/${repo.trim()}`, { headers });
+      if (repoCheck.status === 404) {
+        const createRes = await fetch('https://api.github.com/user/repos', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            name: repo.trim(),
+            description: 'C project created with MyOnlineC IDE',
+            auto_init: true
+          })
+        });
+        if (!createRes.ok) {
+          const errData = await createRes.json().catch(() => ({}));
+          sendJson(res, 400, {
+            success: false,
+            error: errData.message || 'Repository does not exist and auto-creation failed. Check token permissions.'
+          });
+          return;
+        }
+        await new Promise(r => setTimeout(r, 1500));
+      }
+
+      // 2. Fetch current latest commit SHA on branch
+      let parentCommitSha = null;
+      let baseTreeSha = null;
+      const refRes = await fetch(`https://api.github.com/repos/${owner.trim()}/${repo.trim()}/git/ref/heads/${branch.trim()}`, { headers });
+      if (refRes.ok) {
+        const refData = await refRes.json();
+        parentCommitSha = refData.object.sha;
+        const commitRes = await fetch(`https://api.github.com/repos/${owner.trim()}/${repo.trim()}/git/commits/${parentCommitSha}`, { headers });
+        if (commitRes.ok) {
+          const commitData = await commitRes.json();
+          baseTreeSha = commitData.tree.sha;
+        }
+      }
+
+      // 3. Create Git Tree supporting folders
+      const treePayload = {
+        tree: files.map(f => ({
+          path: f.path.replace(/^[\/\\]+/, ''),
+          mode: '100644',
+          type: 'blob',
+          content: f.content
+        }))
+      };
+      if (baseTreeSha) {
+        treePayload.base_tree = baseTreeSha;
+      }
+
+      const treeRes = await fetch(`https://api.github.com/repos/${owner.trim()}/${repo.trim()}/git/trees`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(treePayload)
+      });
+
+      if (!treeRes.ok) {
+        const errData = await treeRes.json().catch(() => ({}));
+        sendJson(res, 400, {
+          success: false,
+          error: errData.message || 'Failed to create Git tree on GitHub.'
+        });
+        return;
+      }
+      const treeData = await treeRes.json();
+
+      // 4. Create Git Commit
+      const commitPayload = {
+        message: message,
+        tree: treeData.sha,
+        parents: parentCommitSha ? [parentCommitSha] : []
+      };
+      const newCommitRes = await fetch(`https://api.github.com/repos/${owner.trim()}/${repo.trim()}/git/commits`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(commitPayload)
+      });
+
+      if (!newCommitRes.ok) {
+        const errData = await newCommitRes.json().catch(() => ({}));
+        sendJson(res, 400, {
+          success: false,
+          error: errData.message || 'Failed to create commit on GitHub.'
+        });
+        return;
+      }
+      const newCommitData = await newCommitRes.json();
+
+      // 5. Update branch reference
+      let updateRefRes;
+      if (parentCommitSha) {
+        updateRefRes = await fetch(`https://api.github.com/repos/${owner.trim()}/${repo.trim()}/git/refs/heads/${branch.trim()}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ sha: newCommitData.sha, force: true })
+        });
+      } else {
+        updateRefRes = await fetch(`https://api.github.com/repos/${owner.trim()}/${repo.trim()}/git/refs`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ ref: `refs/heads/${branch.trim()}`, sha: newCommitData.sha })
+        });
+      }
+
+      if (!updateRefRes.ok) {
+        const errData = await updateRefRes.json().catch(() => ({}));
+        sendJson(res, 400, {
+          success: false,
+          error: errData.message || 'Failed to update branch reference on GitHub.'
+        });
+        return;
+      }
+
+      sendJson(res, 200, {
+        success: true,
+        repoUrl: `https://github.com/${owner.trim()}/${repo.trim()}`,
+        commitUrl: `https://github.com/${owner.trim()}/${repo.trim()}/commit/${newCommitData.sha}`,
+        commitSha: newCommitData.sha
+      });
+    } catch (err) {
+      console.error('GitHub Push error:', err);
+      sendJson(res, 500, {
+        success: false,
+        error: err.message || 'Internal Server Error while pushing to GitHub'
+      });
+    }
+    return;
+  }
+
   // Static File Serving
   if (req.method === 'GET') {
     let safePath = pathname === '/' ? '/index.html' : pathname;

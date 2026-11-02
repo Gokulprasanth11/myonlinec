@@ -59,6 +59,10 @@
           <i class="codicon codicon-cloud-download"></i>
           <span>Export</span>
         </button>
+        <button id="github-modal-btn" class="titlebar-btn github-btn" title="Push project to GitHub">
+          <i class="codicon codicon-github"></i>
+          <span>Push to GitHub</span>
+        </button>
         <button id="run-btn" class="titlebar-btn run-btn" title="Run Code (Ctrl + Enter)">
           <i class="codicon codicon-play"></i>
           <span>Run</span>
@@ -156,7 +160,13 @@
           <div class="panel-content">
             <!-- Terminal Tab Content -->
             <div class="tab-pane active" id="pane-terminal">
-              <pre id="output-terminal" class="terminal-text"><span class="terminal-placeholder">Ready. Click "Run" or press [Ctrl + Enter] to compile and execute your code.</span></pre>
+              <div id="terminal-scroll-area" class="terminal-scroll-area">
+                <div id="output-terminal" class="terminal-text"><span class="terminal-placeholder">Welcome to MyOnlineC Terminal! Press [Run] or type commands: help, run, git push, ls, mkdir, clear</span></div>
+                <div class="terminal-prompt-line">
+                  <span class="prompt-user">gokul@myonlinec</span>:<span class="prompt-path">~/project</span>$&nbsp;
+                  <input type="text" id="terminal-cli-input" class="terminal-cli-input" spellcheck="false" autocomplete="off" placeholder="type a command..." />
+                </div>
+              </div>
             </div>
 
             <!-- Input Tab Content -->
@@ -190,6 +200,51 @@
         </div>
       </div>
     </footer>
+  </div>
+
+  <!-- GitHub Push Modal -->
+  <div id="github-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title"><i class="codicon codicon-github"></i> Push Project to GitHub</div>
+        <button id="close-modal-btn" class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Pushes all current files and folders directly to your GitHub repository.</p>
+        
+        <div class="form-group">
+          <label for="gh-token">GitHub Personal Access Token (PAT):</label>
+          <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" />
+          <span class="field-help">Create one at <a href="https://github.com/settings/tokens" target="_blank">github.com/settings/tokens</a> with <code>repo</code> scope.</span>
+        </div>
+
+        <div class="form-group">
+          <label for="gh-owner">GitHub Username:</label>
+          <input type="text" id="gh-owner" placeholder="e.g. Gokulprasanth11" value="Gokulprasanth11" />
+        </div>
+
+        <div class="form-group">
+          <label for="gh-repo">Repository Name:</label>
+          <input type="text" id="gh-repo" placeholder="e.g. my-c-programs (auto-created if new)" />
+        </div>
+
+        <div class="form-group">
+          <label for="gh-branch">Branch:</label>
+          <input type="text" id="gh-branch" value="main" />
+        </div>
+
+        <div class="form-group">
+          <label for="gh-message">Commit Message:</label>
+          <input type="text" id="gh-message" value="Commit from MyOnlineC IDE" />
+        </div>
+
+        <div id="gh-status" class="gh-status hidden"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="cancel-gh-btn" class="titlebar-btn">Cancel</button>
+        <button id="submit-gh-btn" class="titlebar-btn run-btn"><i class="codicon codicon-cloud-upload"></i> Push Now</button>
+      </div>
+    </div>
   </div>
 
   <!-- Monaco Editor Loader -->
