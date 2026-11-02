@@ -316,6 +316,11 @@ int main() {
   const metricStatus = document.getElementById('metric-status');
   const metricTime = document.getElementById('metric-time');
   const metricMemory = document.getElementById('metric-memory');
+  const toggleSidebarBtn = document.getElementById('toggle-sidebar-btn');
+  const togglePanelBtn = document.getElementById('toggle-panel-btn');
+  const hidePanelBtn = document.getElementById('hide-panel-btn');
+  const sidebar = document.getElementById('sidebar');
+  const bottomPanel = document.getElementById('bottom-panel');
 
   // Helpers
   function getBasename(path) {
@@ -708,6 +713,7 @@ int main() {
     }
 
     runBtn.disabled = true;
+    bottomPanel?.classList.remove('collapsed');
     switchPanelTab('terminal');
     outputTerminal.innerHTML = '<span class="stdout-line">Compiling and running...</span>';
     statusStatusText.innerHTML = '<i class="codicon codicon-sync"></i><span>Compiling...</span>';
@@ -836,11 +842,32 @@ int main() {
     outputTerminal.innerHTML = '<span class="terminal-placeholder">Terminal cleared.</span>';
   });
 
+  // Toggles for Sidebar and Terminal
+  toggleSidebarBtn?.addEventListener('click', () => {
+    sidebar.classList.toggle('collapsed');
+  });
+
+  togglePanelBtn?.addEventListener('click', () => {
+    bottomPanel.classList.toggle('collapsed');
+  });
+
+  hidePanelBtn?.addEventListener('click', () => {
+    bottomPanel.classList.add('collapsed');
+  });
+
   // Global Keyboard Shortcuts
   window.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
       runCode();
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) {
+      e.preventDefault();
+      sidebar.classList.toggle('collapsed');
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === '`') {
+      e.preventDefault();
+      bottomPanel.classList.toggle('collapsed');
     }
   });
 
