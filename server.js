@@ -82,7 +82,12 @@ function serveStaticFile(req, res, filePath) {
     const ext = path.extname(filePath).toLowerCase();
     const contentType = MIME_TYPES[ext] || 'application/octet-stream';
 
-    res.writeHead(200, { 'Content-Type': contentType });
+    res.writeHead(200, {
+      'Content-Type': contentType,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     const stream = fs.createReadStream(filePath);
     stream.pipe(res);
   });
@@ -154,6 +159,8 @@ const server = http.createServer(async (req, res) => {
       if (files.length > 0) {
         requestPayload.files = files;
       }
+
+      console.log(`[EXEC] Compiler: ${compiler} | Code: ${code.length} chars | Extra files: ${files.length} (${files.map(f => f.name).join(', ') || 'none'})`);
 
       const response = await fetch(API_URL, {
         method: 'POST',
