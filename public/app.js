@@ -1,4 +1,4 @@
-// MyOnlineC - VS Code Web IDE Implementation
+// MyOnlineC - Clean VS Code-style IDE
 (function () {
   'use strict';
 
@@ -70,8 +70,8 @@ static inline int cube(int x) {
           type: 'file',
           parent: 'src',
           content: `Project Notes:
-- Standard header files are in include/
-- Main application entry is main.c
+- Header files are in include/
+- Application entry is main.c
 - Run with Ctrl + Enter
 `
         }
@@ -88,7 +88,7 @@ static inline int cube(int x) {
 
 int main() {
     printf("Hello, World!\\n");
-    printf("Welcome to MyOnlineC in VS Code!\\n");
+    printf("Welcome to MyOnlineC!\\n");
     return 0;
 }
 `
@@ -302,31 +302,20 @@ int main() {
   const fileTree = document.getElementById('file-tree');
   const editorTabs = document.getElementById('editor-tabs');
   const activeCrumb = document.getElementById('active-crumb');
-  const windowTitle = document.getElementById('window-title');
   const monacoContainer = document.getElementById('monaco-container');
   const fallbackEditor = document.getElementById('fallback-editor');
   const outputTerminal = document.getElementById('output-terminal');
   const stdinInput = document.getElementById('stdin-input');
-  const problemsList = document.getElementById('problems-list');
-  const problemsCount = document.getElementById('problems-count');
   const statusCursor = document.getElementById('status-cursor');
-  const statusErrorCount = document.getElementById('status-error-count');
-  const statusWarnCount = document.getElementById('status-warn-count');
   const statusLangText = document.getElementById('status-lang-text');
   const statusCompilerText = document.getElementById('status-compiler-text');
-  const bottomPanel = document.getElementById('bottom-panel');
-  const togglePanelBtn = document.getElementById('toggle-panel-btn');
+  const statusStatusText = document.getElementById('status-status-text');
   const clearTerminalBtn = document.getElementById('clear-terminal-btn');
-  const maximizePanelBtn = document.getElementById('maximize-panel-btn');
-  const closePanelBtn = document.getElementById('close-panel-btn');
   const btnNewFile = document.getElementById('btn-new-file');
   const btnNewFolder = document.getElementById('btn-new-folder');
-  const btnRefresh = document.getElementById('btn-refresh');
-  const btnCollapse = document.getElementById('btn-collapse');
-  const statStatus = document.getElementById('stat-status');
-  const statExit = document.getElementById('stat-exit');
-  const statTime = document.getElementById('stat-time');
-  const statMemory = document.getElementById('stat-memory');
+  const metricStatus = document.getElementById('metric-status');
+  const metricTime = document.getElementById('metric-time');
+  const metricMemory = document.getElementById('metric-memory');
 
   // Helpers
   function getBasename(path) {
@@ -355,7 +344,6 @@ int main() {
   function renderFileTree() {
     fileTree.innerHTML = '';
 
-    // Group items by parent
     const tree = {};
     for (const [path, item] of Object.entries(vfs)) {
       const parent = item.parent || '';
@@ -363,7 +351,6 @@ int main() {
       tree[parent].push({ path, ...item });
     }
 
-    // Sort items: folders first, then alphabetical
     for (const parent in tree) {
       tree[parent].sort((a, b) => {
         if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
@@ -453,12 +440,10 @@ int main() {
   function openFile(path) {
     if (!vfs[path] || vfs[path].type !== 'file') return;
 
-    // Save active file content before switching
     if (vfs[activeFilePath] && vfs[activeFilePath].type === 'file') {
       vfs[activeFilePath].content = getEditorValue();
     }
 
-    // Add to open tabs if not present
     if (!openTabs.includes(path)) {
       openTabs.push(path);
     }
@@ -466,9 +451,7 @@ int main() {
     activeFilePath = path;
     setEditorValue(vfs[path].content || '', path);
 
-    // Update breadcrumbs and titles
     activeCrumb.textContent = path.replace(/\//g, ' › ');
-    windowTitle.textContent = `${getBasename(path)} — MyOnlineC [VS Code]`;
     statusLangText.textContent = getLanguage(path).toUpperCase();
 
     renderTabs();
@@ -519,7 +502,6 @@ int main() {
         activeFilePath = '';
         setEditorValue('', '');
         activeCrumb.textContent = '';
-        windowTitle.textContent = 'MyOnlineC [VS Code]';
         renderTabs();
       }
     } else {
@@ -542,7 +524,6 @@ int main() {
       return;
     }
 
-    // Ensure parent folders exist in VFS
     const parts = trimmed.split('/');
     if (parts.length > 1) {
       let currentPath = '';
@@ -675,7 +656,7 @@ int main() {
     renderTabs();
   }
 
-  // Bottom Panel Tab Switching
+  // Bottom Panel Tab Switching (Terminal / Input)
   const panelTabs = document.querySelectorAll('.panel-tab');
   panelTabs.forEach(tab => {
     tab.addEventListener('click', () => {
@@ -699,48 +680,6 @@ int main() {
     });
   }
 
-  // Parse Compiler Problems
-  function parseProblems(errorOutput) {
-    problemsList.innerHTML = '';
-    const regex = /(?:code\.c|main\.c|([a-zA-Z0-9_\-\.]+)):(\d+):(\d+):\s+(fatal error|error|warning):\s+(.+)/g;
-    let match;
-    let count = 0;
-
-    while ((match = regex.exec(errorOutput)) !== null) {
-      count++;
-      const file = match[1] || 'main.c';
-      const line = parseInt(match[2], 10);
-      const col = parseInt(match[3], 10);
-      const type = match[4];
-      const message = match[5];
-
-      const item = document.createElement('div');
-      item.className = 'problem-item';
-      item.innerHTML = `
-        <i class="codicon codicon-${type === 'warning' ? 'warning' : 'error'} problem-icon"></i>
-        <span class="problem-text">${escapeHtml(message)}</span>
-        <span class="problem-location">[${file}:${line}:${col}]</span>
-      `;
-
-      item.addEventListener('click', () => {
-        if (monacoEditor) {
-          monacoEditor.revealLineInCenter(line);
-          monacoEditor.setPosition({ lineNumber: line, column: col });
-          monacoEditor.focus();
-        }
-      });
-
-      problemsList.appendChild(item);
-    }
-
-    problemsCount.textContent = count;
-    statusErrorCount.textContent = count;
-
-    if (count === 0) {
-      problemsList.innerHTML = '<div class="no-problems">No problems detected in the current build.</div>';
-    }
-  }
-
   // Code Execution Engine
   async function runCode() {
     if (vfs[activeFilePath]) {
@@ -757,7 +696,7 @@ int main() {
       return;
     }
 
-    // Collect all other files (extracting clean basenames)
+    // Collect all secondary files
     const secondaryFiles = [];
     for (const [path, item] of Object.entries(vfs)) {
       if (item.type === 'file' && path !== 'main.c') {
@@ -770,7 +709,8 @@ int main() {
 
     runBtn.disabled = true;
     switchPanelTab('terminal');
-    outputTerminal.innerHTML = '<span class="stdout-line">Compiling and executing in sandbox...</span>';
+    outputTerminal.innerHTML = '<span class="stdout-line">Compiling and running...</span>';
+    statusStatusText.innerHTML = '<i class="codicon codicon-sync"></i><span>Compiling...</span>';
 
     try {
       const response = await fetch('/api/run', {
@@ -804,25 +744,32 @@ int main() {
 
       outputTerminal.innerHTML = outputHtml;
 
-      // Parse problems
-      parseProblems(stderr);
+      // Update Metrics
+      metricStatus.textContent = isSuccess ? 'Success' : `Exit ${exitCode}`;
+      metricStatus.className = `meta-badge ${isSuccess ? 'success' : 'error'}`;
 
-      // Update Stats
-      statStatus.textContent = isSuccess ? 'Success' : 'Error';
-      statStatus.className = `stat-value ${isSuccess ? 'status-success' : 'status-error'}`;
-      statExit.textContent = exitCode;
-      statTime.textContent = data.time ? `${(parseFloat(data.time) * 1000).toFixed(0)} ms` : (data.total ? `${(parseFloat(data.total) * 1000).toFixed(0)} ms` : '-');
-      statMemory.textContent = data.memory ? `${parseInt(data.memory, 10)} KB` : '-';
-
-      // Auto-switch to problems tab if errors exist
-      if (!isSuccess && stderr.includes('error:')) {
-        // keep terminal but show problems count
+      if (data.time || data.total) {
+        const sec = parseFloat(data.time || data.total);
+        metricTime.textContent = `${(sec * 1000).toFixed(0)} ms`;
+      } else {
+        metricTime.textContent = '';
       }
+
+      if (data.memory) {
+        metricMemory.textContent = `${parseInt(data.memory, 10)} KB`;
+      } else {
+        metricMemory.textContent = '';
+      }
+
+      statusStatusText.innerHTML = isSuccess
+        ? '<i class="codicon codicon-check"></i><span>Success</span>'
+        : '<i class="codicon codicon-error"></i><span>Build Failed</span>';
 
     } catch (err) {
       outputTerminal.innerHTML = `<span class="stderr-line">Network error: ${escapeHtml(err.message)}</span>`;
-      statStatus.textContent = 'Network Error';
-      statStatus.className = 'stat-value status-error';
+      metricStatus.textContent = 'Error';
+      metricStatus.className = 'meta-badge error';
+      statusStatusText.innerHTML = '<i class="codicon codicon-error"></i><span>Error</span>';
     } finally {
       runBtn.disabled = false;
     }
@@ -858,11 +805,6 @@ int main() {
   // Toolbar Actions
   btnNewFile.addEventListener('click', () => promptNewFile(''));
   btnNewFolder.addEventListener('click', promptNewFolder);
-  btnRefresh.addEventListener('click', renderFileTree);
-  btnCollapse.addEventListener('click', () => {
-    expandedFolders.clear();
-    renderFileTree();
-  });
 
   runBtn.addEventListener('click', runCode);
 
@@ -894,27 +836,11 @@ int main() {
     outputTerminal.innerHTML = '<span class="terminal-placeholder">Terminal cleared.</span>';
   });
 
-  maximizePanelBtn.addEventListener('click', () => {
-    bottomPanel.classList.toggle('maximized');
-  });
-
-  closePanelBtn.addEventListener('click', () => {
-    bottomPanel.classList.add('hidden');
-  });
-
-  togglePanelBtn.addEventListener('click', () => {
-    bottomPanel.classList.toggle('hidden');
-  });
-
   // Global Keyboard Shortcuts
   window.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
       e.preventDefault();
       runCode();
-    }
-    if ((e.ctrlKey || e.metaKey) && e.key === '`') {
-      e.preventDefault();
-      bottomPanel.classList.toggle('hidden');
     }
   });
 

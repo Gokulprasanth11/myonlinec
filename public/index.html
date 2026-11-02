@@ -3,42 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MyOnlineC - Visual Studio Code</title>
+  <title>MyOnlineC - C IDE</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Segoe+UI:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Codicons for authentic VS Code icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codicons/0.0.36/codicon.min.css">
 </head>
 <body class="vscode-dark">
   <div class="workbench">
-    <!-- VS Code Title Bar -->
+    <!-- Top Header Bar -->
     <header class="titlebar">
       <div class="titlebar-left">
-        <div class="app-icon" title="MyOnlineC IDE">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M17.5 2.5L7.5 8L17.5 13.5V2.5Z" fill="#007ACC"/><path d="M17.5 13.5L7.5 19L17.5 24.5V13.5Z" fill="#007ACC" opacity="0.8"/><path d="M6.5 19L1.5 16V11L6.5 8V19Z" fill="#007ACC" opacity="0.6"/></svg>
+        <div class="app-logo">
+          <span class="logo-badge">C</span>
+          <span class="logo-text">MyOnline<span class="highlight">C</span></span>
         </div>
-        <nav class="menubar">
-          <div class="menu-item">File</div>
-          <div class="menu-item">Edit</div>
-          <div class="menu-item">Selection</div>
-          <div class="menu-item">View</div>
-          <div class="menu-item">Go</div>
-          <div class="menu-item">Run</div>
-          <div class="menu-item">Terminal</div>
-          <div class="menu-item">Help</div>
-        </nav>
       </div>
 
       <div class="titlebar-center">
-        <span id="window-title" class="window-title">main.c — MyOnlineC [VS Code]</span>
         <div class="quick-selectors">
           <div class="select-wrapper">
             <span class="select-label">Template:</span>
             <select id="sample-select" title="Load sample project">
-              <option value="hello">Hello, World!</option>
               <option value="folders_project">Project with Folders (include/ & src/)</option>
+              <option value="hello">Hello, World!</option>
               <option value="multi_file">Multi-File (main.c + math_utils.h)</option>
               <option value="ldd_inspect">Inspect Dynamic Libraries (ldd)</option>
               <option value="sum">Sum of Two Numbers (stdin)</option>
@@ -58,56 +47,21 @@
       </div>
 
       <div class="titlebar-right">
+        <button id="download-btn" class="titlebar-btn" title="Export Current File">
+          <i class="codicon codicon-cloud-download"></i>
+          <span>Export</span>
+        </button>
         <button id="run-btn" class="titlebar-btn run-btn" title="Run Code (Ctrl + Enter)">
           <i class="codicon codicon-play"></i>
           <span>Run</span>
           <span class="keybinding">Ctrl+↵</span>
         </button>
-        <button id="download-btn" class="titlebar-btn" title="Export Current File">
-          <i class="codicon codicon-cloud-download"></i>
-          <span>Export</span>
-        </button>
-        <div class="window-controls">
-          <span class="win-btn win-minimize" title="Minimize">─</span>
-          <span class="win-btn win-maximize" title="Maximize">□</span>
-          <span class="win-btn win-close" title="Close">✕</span>
-        </div>
       </div>
     </header>
 
-    <!-- Main Content Area -->
+    <!-- Main Workspace Area -->
     <div class="workbench-body">
-      <!-- Activity Bar (Far Left) -->
-      <aside class="activity-bar">
-        <div class="activity-bar-top">
-          <button class="activity-btn active" id="act-explorer" title="Explorer (Ctrl+Shift+E)">
-            <i class="codicon codicon-files"></i>
-          </button>
-          <button class="activity-btn" id="act-search" title="Search (Ctrl+Shift+F)">
-            <i class="codicon codicon-search"></i>
-          </button>
-          <button class="activity-btn" id="act-scm" title="Source Control (Ctrl+Shift+G)">
-            <i class="codicon codicon-source-control"></i>
-            <span class="badge">1</span>
-          </button>
-          <button class="activity-btn" id="act-run" title="Run & Debug (Ctrl+Shift+D)">
-            <i class="codicon codicon-run-all"></i>
-          </button>
-          <button class="activity-btn" id="act-extensions" title="Extensions (Ctrl+Shift+X)">
-            <i class="codicon codicon-extensions"></i>
-          </button>
-        </div>
-        <div class="activity-bar-bottom">
-          <button class="activity-btn" title="Accounts">
-            <i class="codicon codicon-account"></i>
-          </button>
-          <button class="activity-btn" title="Settings">
-            <i class="codicon codicon-settings-gear"></i>
-          </button>
-        </div>
-      </aside>
-
-      <!-- Primary Sidebar (Explorer) -->
+      <!-- File Explorer Sidebar -->
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
           <span class="sidebar-title">EXPLORER</span>
@@ -118,24 +72,12 @@
             <button id="btn-new-folder" class="action-btn" title="New Folder">
               <i class="codicon codicon-new-folder"></i>
             </button>
-            <button id="btn-refresh" class="action-btn" title="Refresh Explorer">
-              <i class="codicon codicon-refresh"></i>
-            </button>
-            <button id="btn-collapse" class="action-btn" title="Collapse Folders">
-              <i class="codicon codicon-collapse-all"></i>
-            </button>
           </div>
         </div>
 
-        <div class="explorer-section">
-          <div class="section-header" id="section-header">
-            <i class="codicon codicon-chevron-down" id="section-arrow"></i>
-            <span class="project-name">MYONLINEC</span>
-          </div>
-          <!-- File Tree -->
-          <div class="file-tree" id="file-tree">
-            <!-- Dynamic tree nodes rendered by app.js -->
-          </div>
+        <!-- File Tree -->
+        <div class="file-tree" id="file-tree">
+          <!-- Dynamic tree nodes rendered by app.js -->
         </div>
       </aside>
 
@@ -149,12 +91,11 @@
           <div class="editor-tab-actions">
             <button id="format-btn" class="action-btn" title="Format Document (Shift+Alt+F)">
               <i class="codicon codicon-symbol-keyword"></i>
+              <span>Format</span>
             </button>
             <button id="copy-code-btn" class="action-btn" title="Copy Content">
               <i class="codicon codicon-copy"></i>
-            </button>
-            <button id="toggle-panel-btn" class="action-btn" title="Toggle Terminal Panel (Ctrl+`)">
-              <i class="codicon codicon-layout-panel"></i>
+              <span>Copy</span>
             </button>
           </div>
         </div>
@@ -166,39 +107,36 @@
           <span class="crumb active-crumb" id="active-crumb">main.c</span>
         </div>
 
-        <!-- Monaco Editor Container -->
+        <!-- Monaco Editor Viewport -->
         <div class="editor-viewport" id="editor-viewport">
           <div id="monaco-container" class="monaco-container"></div>
           <textarea id="fallback-editor" spellcheck="false" class="fallback-editor"></textarea>
         </div>
 
-        <!-- VS Code Bottom Panel (Drawer) -->
+        <!-- Bottom Panel (Terminal & Input) -->
         <div class="bottom-panel" id="bottom-panel">
           <div class="panel-header">
             <div class="panel-tabs">
               <button class="panel-tab active" data-tab="terminal">
+                <i class="codicon codicon-terminal"></i>
                 <span>TERMINAL</span>
               </button>
               <button class="panel-tab" data-tab="input">
+                <i class="codicon codicon-edit"></i>
                 <span>INPUT (STDIN)</span>
               </button>
-              <button class="panel-tab" data-tab="problems">
-                <span>PROBLEMS</span>
-                <span class="badge-count" id="problems-count">0</span>
-              </button>
-              <button class="panel-tab" data-tab="output">
-                <span>EXECUTION STATS</span>
-              </button>
             </div>
+
+            <div class="panel-meta" id="panel-meta">
+              <span id="metric-status" class="meta-badge">Ready</span>
+              <span id="metric-time" class="meta-item"></span>
+              <span id="metric-memory" class="meta-item"></span>
+            </div>
+
             <div class="panel-actions">
               <button id="clear-terminal-btn" class="action-btn" title="Clear Terminal">
                 <i class="codicon codicon-clear-all"></i>
-              </button>
-              <button id="maximize-panel-btn" class="action-btn" title="Toggle Maximize Panel">
-                <i class="codicon codicon-chevron-up" id="maximize-icon"></i>
-              </button>
-              <button id="close-panel-btn" class="action-btn" title="Close Panel">
-                <i class="codicon codicon-close"></i>
+                <span>Clear</span>
               </button>
             </div>
           </div>
@@ -206,70 +144,30 @@
           <div class="panel-content">
             <!-- Terminal Tab Content -->
             <div class="tab-pane active" id="pane-terminal">
-              <pre id="output-terminal" class="terminal-text"><span class="terminal-placeholder">Ready. Press [Ctrl + Enter] or click 'Run' to compile and execute your code.</span></pre>
+              <pre id="output-terminal" class="terminal-text"><span class="terminal-placeholder">Ready. Click "Run" or press [Ctrl + Enter] to compile and execute your code.</span></pre>
             </div>
 
             <!-- Input Tab Content -->
             <div class="tab-pane" id="pane-input">
               <textarea id="stdin-input" class="stdin-box" placeholder="Type standard input here (stdin) for programs using scanf(), getchar(), etc."></textarea>
             </div>
-
-            <!-- Problems Tab Content -->
-            <div class="tab-pane" id="pane-problems">
-              <div id="problems-list" class="problems-list">
-                <div class="no-problems">No problems have been detected in the workspace.</div>
-              </div>
-            </div>
-
-            <!-- Execution Stats Content -->
-            <div class="tab-pane" id="pane-output">
-              <div class="stats-grid">
-                <div class="stat-card">
-                  <span class="stat-label">Execution Status</span>
-                  <span id="stat-status" class="stat-value status-ready">Ready</span>
-                </div>
-                <div class="stat-card">
-                  <span class="stat-label">Exit Code</span>
-                  <span id="stat-exit" class="stat-value">-</span>
-                </div>
-                <div class="stat-card">
-                  <span class="stat-label">CPU Runtime</span>
-                  <span id="stat-time" class="stat-value">-</span>
-                </div>
-                <div class="stat-card">
-                  <span class="stat-label">Memory Footprint</span>
-                  <span id="stat-memory" class="stat-value">-</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </main>
     </div>
 
-    <!-- Status Bar (Bottom) -->
+    <!-- Status Bar -->
     <footer class="statusbar">
       <div class="statusbar-left">
-        <div class="status-item branch-item" title="Git Branch">
-          <i class="codicon codicon-git-branch"></i>
-          <span>master*</span>
-        </div>
-        <div class="status-item sync-item" title="OnlineCompiler.io connected">
-          <i class="codicon codicon-sync"></i>
-        </div>
-        <div class="status-item errors-item" title="Errors and Warnings">
-          <i class="codicon codicon-error"></i>
-          <span id="status-error-count">0</span>
-          <i class="codicon codicon-warning"></i>
-          <span id="status-warn-count">0</span>
+        <div class="status-item" id="status-status-text">
+          <i class="codicon codicon-check"></i>
+          <span>Ready</span>
         </div>
       </div>
 
       <div class="statusbar-right">
         <div class="status-item" id="status-cursor">Ln 1, Col 1</div>
-        <div class="status-item">Spaces: 4</div>
         <div class="status-item">UTF-8</div>
-        <div class="status-item">LF</div>
         <div class="status-item status-lang">
           <i class="codicon codicon-code"></i>
           <span id="status-lang-text">C</span>
@@ -277,9 +175,6 @@
         <div class="status-item compiler-status" title="Current Compiler Engine">
           <i class="codicon codicon-server"></i>
           <span id="status-compiler-text">GCC 15</span>
-        </div>
-        <div class="status-item notification-item" title="Notifications">
-          <i class="codicon codicon-bell"></i>
         </div>
       </div>
     </footer>
