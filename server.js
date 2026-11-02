@@ -111,7 +111,8 @@ const server = http.createServer(async (req, res) => {
       defaultCompiler: 'gcc-15',
       supportedCompilers: [
         { id: 'gcc-15', name: 'C (GCC 15)' },
-        { id: 'clang-21', name: 'C (Clang 21)' }
+        { id: 'clang-21', name: 'C (Clang 21)' },
+        { id: 'bash-5.2', name: 'Bash 5.2 (Make / Shell)' }
       ]
     });
     return;
@@ -133,6 +134,7 @@ const server = http.createServer(async (req, res) => {
       const input = payload.input || '';
       const compiler = payload.compiler || 'gcc-15';
       const timeLimit = Math.min(Math.max(Number(payload.time_limit) || 10, 1), 30);
+      const files = Array.isArray(payload.files) ? payload.files : [];
 
       if (!code || typeof code !== 'string') {
         sendJson(res, 400, {
@@ -142,6 +144,17 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      const requestPayload = {
+        compiler: compiler,
+        code: code,
+        input: input,
+        time_limit: timeLimit
+      };
+
+      if (files.length > 0) {
+        requestPayload.files = files;
+      }
+
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: {
@@ -149,12 +162,7 @@ const server = http.createServer(async (req, res) => {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({
-          compiler: compiler,
-          code: code,
-          input: input,
-          time_limit: timeLimit
-        })
+        body: JSON.stringify(requestPayload)
       });
 
       const responseText = await response.text();
@@ -217,3 +225,4 @@ server.listen(PORT, () => {
   console.log(` Default Compiler : GCC 15`);
   console.log(`===============================================`);
 });
+

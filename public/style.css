@@ -221,17 +221,93 @@ html, body {
   flex-shrink: 0;
 }
 
+.file-tabs-header {
+  padding: 0 8px 0 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.file-tabs-bar {
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  height: 100%;
+  scrollbar-width: none;
+}
+
+.file-tabs-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.add-btn {
+  color: var(--accent-green);
+  font-weight: 600;
+  border: 1px dashed rgba(78, 201, 176, 0.4);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.add-btn:hover {
+  background-color: rgba(78, 201, 176, 0.1);
+  border-color: var(--accent-green);
+  color: #6ee7b7;
+}
+
 .file-tab {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
-  color: var(--text-light);
+  font-size: 0.83rem;
+  color: var(--text-secondary);
   font-family: var(--font-mono);
-  padding: 6px 12px;
+  padding: 7px 12px;
+  background-color: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  border-top: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: all 0.12s ease;
+  height: 100%;
+}
+
+.file-tab:hover {
+  background-color: #2a2a2d;
+  color: var(--text-primary);
+}
+
+.file-tab.active {
   background-color: var(--bg-primary);
+  color: var(--text-light);
   border-top: 2px solid var(--accent-color);
-  margin-top: 2px;
+}
+
+.file-close-btn {
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--text-secondary);
+  margin-left: 4px;
+  border-radius: 3px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.file-close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #ff6b6b;
 }
 
 .file-icon {
@@ -241,6 +317,18 @@ html, body {
   font-size: 0.65rem;
   padding: 1px 4px;
   border-radius: 2px;
+}
+
+.file-icon.header-file {
+  background-color: #9c55aa;
+}
+
+.file-icon.make-file {
+  background-color: #d18f52;
+}
+
+.file-icon.sh-file {
+  background-color: #4e9c52;
 }
 
 .pane-title {
@@ -511,3 +599,4 @@ html, body {
     border-bottom: 1px solid var(--border-color);
   }
 }
+

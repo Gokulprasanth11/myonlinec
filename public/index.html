@@ -26,6 +26,9 @@
           <label for="sample-select">Template:</label>
           <select id="sample-select" title="Load sample code">
             <option value="hello">Hello, World!</option>
+            <option value="multi_file">Multi-File (main.c + math_utils.h)</option>
+            <option value="ldd_inspect">Inspect Dynamic Libraries (ldd)</option>
+            <option value="makefile_project">Makefile Project (Bash + Makefile)</option>
             <option value="sum">Sum of Two Numbers (stdin)</option>
             <option value="fibonacci">Fibonacci Series</option>
             <option value="pointers">Pointers & Memory</option>
@@ -35,9 +38,10 @@
 
         <div class="control-group">
           <label for="compiler-select">Compiler:</label>
-          <select id="compiler-select" title="Select C compiler">
-            <option value="gcc-15" selected>GCC 15</option>
-            <option value="clang-21">Clang 21</option>
+          <select id="compiler-select" title="Select compiler/environment">
+            <option value="gcc-15" selected>GCC 15 (C)</option>
+            <option value="clang-21">Clang 21 (C)</option>
+            <option value="bash-5.2">Bash 5.2 (Make / Shell / ldd)</option>
           </select>
         </div>
       </div>
@@ -62,14 +66,16 @@
     <main class="workspace">
       <!-- Editor Column -->
       <section class="editor-pane">
-        <div class="pane-header">
-          <div class="file-tab active">
-            <span class="file-icon">c</span>
-            <span class="file-name">main.c</span>
+        <div class="pane-header file-tabs-header">
+          <div id="file-tabs-bar" class="file-tabs-bar">
+            <!-- Dynamic tabs rendered by app.js -->
           </div>
-          <div class="editor-actions">
-            <button id="format-btn" class="icon-btn" title="Format code">Format</button>
-            <button id="copy-code-btn" class="icon-btn" title="Copy code to clipboard">Copy</button>
+          <div class="tab-controls">
+            <button id="add-file-btn" class="icon-btn add-btn" title="Add new file (up to 8 files)">+ New File</button>
+            <div class="editor-actions">
+              <button id="format-btn" class="icon-btn" title="Format code">Format</button>
+              <button id="copy-code-btn" class="icon-btn" title="Copy code to clipboard">Copy</button>
+            </div>
           </div>
         </div>
         
@@ -157,3 +163,4 @@
   <script src="app.js"></script>
 </body>
 </html>
+

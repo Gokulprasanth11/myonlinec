@@ -2,21 +2,178 @@
 (function () {
   'use strict';
 
-  // Sample templates
+  // Sample templates supporting single & multi-file projects
   const SAMPLES = {
     hello: {
-      code: `#include <stdio.h>
+      compiler: 'gcc-15',
+      files: {
+        'main.c': `#include <stdio.h>
 
 int main() {
     printf("Hello, World!\\n");
     printf("Welcome to MyOnlineC Compiler!\\n");
     return 0;
 }
+`
+      },
+      stdin: ''
+    },
+    multi_file: {
+      compiler: 'gcc-15',
+      files: {
+        'main.c': `#include <stdio.h>
+#include "math_utils.h"
+
+int main() {
+    int x = 20, y = 8;
+    printf("======================================\\n");
+    printf("   Multi-File C Project in MyOnlineC  \\n");
+    printf("======================================\\n\\n");
+
+    printf("Sum:      %d + %d = %d\\n", x, y, add(x, y));
+    printf("Multiply: %d * %d = %d\\n", x, y, multiply(x, y));
+    printf("Power:    %d ^ 3 = %d\\n", x, power(x, 3));
+    printf("Max:      max(%d, %d) = %d\\n", x, y, max(x, y));
+
+    return 0;
+}
 `,
+        'math_utils.h': `#ifndef MATH_UTILS_H
+#define MATH_UTILS_H
+
+static inline int add(int a, int b) {
+    return a + b;
+}
+
+static inline int multiply(int a, int b) {
+    return a * b;
+}
+
+static inline int power(int base, int exp) {
+    int result = 1;
+    for (int i = 0; i < exp; i++) {
+        result *= base;
+    }
+    return result;
+}
+
+static inline int max(int a, int b) {
+    return (a > b) ? a : b;
+}
+
+#endif // MATH_UTILS_H
+`
+      },
+      stdin: ''
+    },
+    ldd_inspect: {
+      compiler: 'gcc-15',
+      files: {
+        'main.c': `#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+int main() {
+    printf("===================================================\\n");
+    printf(" Dynamic Shared Library Inspection (ldd)           \\n");
+    printf("===================================================\\n\\n");
+
+    // Math operation to pull in libm
+    double val = sqrt(256.0);
+    printf("Computed sqrt(256.0) = %.2f\\n\\n", val);
+
+    printf("Executing 'ldd /proc/self/exe' inside Debian container:\\n");
+    printf("---------------------------------------------------\\n");
+    fflush(stdout);
+
+    // /proc/self/exe refers directly to the currently running process binary
+    int ret = system("ldd /proc/self/exe");
+    if (ret != 0) {
+        // Fallback: direct dynamic linker inspection
+        printf("\\nFallback to direct dynamic linker /lib64/ld-linux-x86-64.so.2:\\n");
+        system("/lib64/ld-linux-x86-64.so.2 --list /proc/self/exe");
+    }
+
+    return 0;
+}
+`
+      },
+      stdin: ''
+    },
+    makefile_project: {
+      compiler: 'bash-5.2',
+      files: {
+        'main.c': `# Execute Makefile and run compiled application
+echo "=========================================="
+echo " Building Project with Makefile via Make  "
+echo "=========================================="
+make clean
+make
+
+echo -e "\\n=========================================="
+echo " Checking Dynamic Dependencies (ldd)     "
+echo "=========================================="
+ldd ./app
+
+echo -e "\\n=========================================="
+echo " Executing Compiled Application (./app)  "
+echo "=========================================="
+./app
+`,
+        'Makefile': `CC = gcc
+CFLAGS = -Wall -Wextra -O2
+TARGET = app
+
+all: $(TARGET)
+
+$(TARGET): main.o utils.o
+	$(CC) $(CFLAGS) -o $(TARGET) main.o utils.o -lm
+
+main.o: app_main.c utils.h
+	$(CC) $(CFLAGS) -c app_main.c -o main.o
+
+utils.o: utils.c utils.h
+	$(CC) $(CFLAGS) -c utils.c -o utils.o
+
+clean:
+	rm -f *.o $(TARGET)
+`,
+        'app_main.c': `#include <stdio.h>
+#include "utils.h"
+
+int main() {
+    printf("Hello from C app compiled via Makefile!\\n");
+    greet("Gokul");
+    printf("Square of 12 is: %d\\n", square(12));
+    return 0;
+}
+`,
+        'utils.h': `#ifndef UTILS_H
+#define UTILS_H
+
+void greet(const char *name);
+int square(int x);
+
+#endif
+`,
+        'utils.c': `#include <stdio.h>
+#include "utils.h"
+
+void greet(const char *name) {
+    printf("Hello %s! This function was compiled from utils.c.\\n", name);
+}
+
+int square(int x) {
+    return x * x;
+}
+`
+      },
       stdin: ''
     },
     sum: {
-      code: `#include <stdio.h>
+      compiler: 'gcc-15',
+      files: {
+        'main.c': `#include <stdio.h>
 
 int main() {
     int a, b;
@@ -28,11 +185,14 @@ int main() {
     }
     return 0;
 }
-`,
+`
+      },
       stdin: '25 75'
     },
     fibonacci: {
-      code: `#include <stdio.h>
+      compiler: 'gcc-15',
+      files: {
+        'main.c': `#include <stdio.h>
 
 void printFibonacci(int n) {
     long long t1 = 0, t2 = 1, next;
@@ -51,11 +211,14 @@ int main() {
     printFibonacci(terms);
     return 0;
 }
-`,
+`
+      },
       stdin: ''
     },
     pointers: {
-      code: `#include <stdio.h>
+      compiler: 'gcc-15',
+      files: {
+        'main.c': `#include <stdio.h>
 #include <stdlib.h>
 
 int main() {
@@ -78,11 +241,14 @@ int main() {
     free(arr);
     return 0;
 }
-`,
+`
+      },
       stdin: ''
     },
     bubble_sort: {
-      code: `#include <stdio.h>
+      compiler: 'gcc-15',
+      files: {
+        'main.c': `#include <stdio.h>
 
 void bubbleSort(int arr[], int n) {
     for (int i = 0; i < n - 1; i++) {
@@ -111,10 +277,16 @@ int main() {
     printf("\\n");
     return 0;
 }
-`,
+`
+      },
       stdin: ''
     }
   };
+
+  // State Management
+  let projectFiles = { ...SAMPLES.hello.files };
+  let activeFileName = 'main.c';
+  let monacoEditor = null;
 
   // DOM Elements
   const sampleSelect = document.getElementById('sample-select');
@@ -138,12 +310,172 @@ int main() {
   const cursorPosElem = document.getElementById('editor-cursor-pos');
   const fallbackEditor = document.getElementById('fallback-editor');
   const editorContainer = document.getElementById('editor-container');
+  const fileTabsBar = document.getElementById('file-tabs-bar');
+  const addFileBtn = document.getElementById('add-file-btn');
 
-  let monacoEditor = null;
+  // Detect file language for Monaco
+  function getLanguageForFile(filename) {
+    const lower = filename.toLowerCase();
+    if (lower.endsWith('.c') || lower.endsWith('.h')) return 'c';
+    if (lower === 'makefile' || lower.endsWith('.mk')) return 'makefile';
+    if (lower.endsWith('.sh') || lower.endsWith('.bash')) return 'shell';
+    return 'plaintext';
+  }
 
-  // Initialize Monaco Editor or fallback
+  // Get icon class for file
+  function getFileIconClass(filename) {
+    const lower = filename.toLowerCase();
+    if (lower.endsWith('.h')) return 'header-file';
+    if (lower === 'makefile' || lower.endsWith('.mk')) return 'make-file';
+    if (lower.endsWith('.sh') || lower.endsWith('.bash')) return 'sh-file';
+    return '';
+  }
+
+  // Render Tabs
+  function renderTabs() {
+    fileTabsBar.innerHTML = '';
+    const filenames = Object.keys(projectFiles);
+
+    filenames.forEach(filename => {
+      const tab = document.createElement('div');
+      tab.className = `file-tab ${filename === activeFileName ? 'active' : ''}`;
+      tab.title = filename;
+
+      const icon = document.createElement('span');
+      const iconType = getFileIconClass(filename);
+      icon.className = `file-icon ${iconType}`;
+
+      if (filename.toLowerCase().endsWith('.h')) {
+        icon.textContent = 'h';
+      } else if (filename.toLowerCase() === 'makefile' || filename.toLowerCase().endsWith('.mk')) {
+        icon.textContent = 'mk';
+      } else if (filename.toLowerCase().endsWith('.sh')) {
+        icon.textContent = 'sh';
+      } else {
+        icon.textContent = 'c';
+      }
+
+      const name = document.createElement('span');
+      name.className = 'file-name';
+      name.textContent = filename;
+
+      tab.appendChild(icon);
+      tab.appendChild(name);
+
+      // Only allow closing non-main files
+      if (filename !== 'main.c') {
+        const closeBtn = document.createElement('span');
+        closeBtn.className = 'file-close-btn';
+        closeBtn.innerHTML = '&times;';
+        closeBtn.title = `Remove ${filename}`;
+        closeBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          deleteFile(filename);
+        });
+        tab.appendChild(closeBtn);
+      }
+
+      tab.addEventListener('click', () => {
+        switchFile(filename);
+      });
+
+      fileTabsBar.appendChild(tab);
+    });
+  }
+
+  // Switch Active File
+  function switchFile(newFileName) {
+    if (newFileName === activeFileName) return;
+
+    // Save current editor content
+    projectFiles[activeFileName] = getEditorValue();
+
+    // Switch active
+    activeFileName = newFileName;
+    setEditorValue(projectFiles[activeFileName] || '', newFileName);
+    renderTabs();
+  }
+
+  // Delete a file
+  function deleteFile(filename) {
+    if (filename === 'main.c') return;
+    if (confirm(`Remove file "${filename}"?`)) {
+      delete projectFiles[filename];
+      if (activeFileName === filename) {
+        activeFileName = 'main.c';
+        setEditorValue(projectFiles['main.c'] || '', 'main.c');
+      }
+      renderTabs();
+    }
+  }
+
+  // Add a new file
+  addFileBtn.addEventListener('click', function () {
+    const fileCount = Object.keys(projectFiles).length;
+    if (fileCount >= 8) {
+      alert('Maximum 8 files allowed per project by the compiler sandbox.');
+      return;
+    }
+
+    const filename = prompt('Enter new file name (e.g., utils.h, helper.c, Makefile):');
+    if (!filename) return;
+
+    const trimmed = filename.trim();
+    if (!trimmed) return;
+
+    if (projectFiles[trimmed] !== undefined) {
+      alert(`File "${trimmed}" already exists.`);
+      switchFile(trimmed);
+      return;
+    }
+
+    // Default template based on extension
+    let initialContent = '';
+    if (trimmed.endsWith('.h')) {
+      const guard = trimmed.toUpperCase().replace(/[^A-Z0-9]/g, '_');
+      initialContent = `#ifndef ${guard}\n#define ${guard}\n\n// Add header declarations here\n\n#endif // ${guard}\n`;
+    } else if (trimmed === 'Makefile') {
+      initialContent = `CC = gcc\nCFLAGS = -Wall -O2\n\nall:\n\t$(CC) $(CFLAGS) -o app main.c\n`;
+    } else if (trimmed.endsWith('.c')) {
+      initialContent = `#include <stdio.h>\n\n// Helper functions\n`;
+    }
+
+    // Save current active content
+    projectFiles[activeFileName] = getEditorValue();
+
+    // Insert new file
+    projectFiles[trimmed] = initialContent;
+    activeFileName = trimmed;
+    setEditorValue(initialContent, trimmed);
+    renderTabs();
+  });
+
+  function getEditorValue() {
+    if (monacoEditor) {
+      return monacoEditor.getValue();
+    }
+    return fallbackEditor.value;
+  }
+
+  function setEditorValue(val, filename) {
+    if (monacoEditor) {
+      monacoEditor.setValue(val);
+      if (filename) {
+        const lang = getLanguageForFile(filename);
+        const model = monacoEditor.getModel();
+        if (model) {
+          monaco.editor.setModelLanguage(model, lang);
+        }
+      }
+    } else {
+      fallbackEditor.value = val;
+    }
+  }
+
+  // Initialize Monaco Editor
   function initEditor() {
-    fallbackEditor.value = SAMPLES.hello.code;
+    const initialCode = projectFiles[activeFileName] || '';
+    fallbackEditor.value = initialCode;
 
     if (window.require && typeof window.require.config === 'function') {
       window.require.config({
@@ -153,12 +485,11 @@ int main() {
       });
 
       window.require(['vs/editor/editor.main'], function () {
-        // Hide fallback textarea
         fallbackEditor.style.display = 'none';
 
         monacoEditor = monaco.editor.create(editorContainer, {
-          value: SAMPLES.hello.code,
-          language: 'c',
+          value: initialCode,
+          language: getLanguageForFile(activeFileName),
           theme: 'vs-dark',
           fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
           fontSize: 14,
@@ -173,12 +504,10 @@ int main() {
           renderWhitespace: 'selection'
         });
 
-        // Update cursor position
         monacoEditor.onDidChangeCursorPosition(function (e) {
           cursorPosElem.textContent = `Ln ${e.position.lineNumber}, Col ${e.position.column}`;
         });
 
-        // Add keyboard shortcut for Run inside Monaco
         monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, function () {
           runCode();
         });
@@ -187,9 +516,9 @@ int main() {
       });
     }
 
-    // Fallback cursor position tracker
     fallbackEditor.addEventListener('keyup', updateFallbackCursor);
     fallbackEditor.addEventListener('click', updateFallbackCursor);
+    renderTabs();
   }
 
   function updateFallbackCursor() {
@@ -200,30 +529,21 @@ int main() {
     cursorPosElem.textContent = `Ln ${lineNum}, Col ${colNum}`;
   }
 
-  function getCode() {
-    if (monacoEditor) {
-      return monacoEditor.getValue();
-    }
-    return fallbackEditor.value;
-  }
-
-  function setCode(code) {
-    if (monacoEditor) {
-      monacoEditor.setValue(code);
-    } else {
-      fallbackEditor.value = code;
-    }
-  }
-
   // Load sample code
   sampleSelect.addEventListener('change', function () {
     const key = sampleSelect.value;
     const sample = SAMPLES[key];
     if (sample) {
-      setCode(sample.code);
-      if (sample.stdin) {
+      projectFiles = { ...sample.files };
+      activeFileName = 'main.c';
+      if (sample.compiler) {
+        compilerSelect.value = sample.compiler;
+      }
+      setEditorValue(projectFiles['main.c'], 'main.c');
+      if (sample.stdin !== undefined) {
         stdinInput.value = sample.stdin;
       }
+      renderTabs();
     }
   });
 
@@ -231,18 +551,25 @@ int main() {
   resetBtn.addEventListener('click', function () {
     const key = sampleSelect.value;
     const sample = SAMPLES[key] || SAMPLES.hello;
-    setCode(sample.code);
+    projectFiles = { ...sample.files };
+    activeFileName = 'main.c';
+    if (sample.compiler) {
+      compilerSelect.value = sample.compiler;
+    }
+    setEditorValue(projectFiles['main.c'], 'main.c');
     stdinInput.value = sample.stdin || '';
+    renderTabs();
   });
 
-  // Download .c file
+  // Download active file
   downloadBtn.addEventListener('click', function () {
-    const code = getCode();
-    const blob = new Blob([code], { type: 'text/x-c;charset=utf-8' });
+    projectFiles[activeFileName] = getEditorValue();
+    const code = projectFiles[activeFileName];
+    const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'main.c';
+    a.download = activeFileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -259,7 +586,8 @@ int main() {
   // Copy code
   copyCodeBtn.addEventListener('click', async function () {
     try {
-      await navigator.clipboard.writeText(getCode());
+      projectFiles[activeFileName] = getEditorValue();
+      await navigator.clipboard.writeText(projectFiles[activeFileName]);
       const prev = copyCodeBtn.textContent;
       copyCodeBtn.textContent = 'Copied!';
       setTimeout(() => { copyCodeBtn.textContent = prev; }, 1500);
@@ -294,19 +622,32 @@ int main() {
 
   // Execute Code via /api/run
   async function runCode() {
-    const code = getCode();
+    projectFiles[activeFileName] = getEditorValue();
+
+    const mainCode = projectFiles['main.c'] || projectFiles[activeFileName];
     const input = stdinInput.value;
     const compiler = compilerSelect.value || 'gcc-15';
 
-    if (!code.trim()) {
-      alert('Please enter some C code to compile.');
+    if (!mainCode || !mainCode.trim()) {
+      alert('Please enter code to compile.');
       return;
+    }
+
+    // Build secondary files array
+    const secondaryFiles = [];
+    for (const [name, content] of Object.entries(projectFiles)) {
+      if (name !== 'main.c') {
+        secondaryFiles.push({
+          name: name,
+          content: content
+        });
+      }
     }
 
     // Set UI to loading state
     runBtn.disabled = true;
     loadingOverlay.classList.remove('hidden');
-    outputConsole.innerHTML = '<span class="stdout-text">Compiling and running...</span>';
+    outputConsole.innerHTML = '<span class="stdout-text">Compiling and executing in sandbox...</span>';
 
     try {
       const response = await fetch('/api/run', {
@@ -316,9 +657,10 @@ int main() {
         },
         body: JSON.stringify({
           compiler: compiler,
-          code: code,
+          code: mainCode,
+          files: secondaryFiles,
           input: input,
-          time_limit: 10
+          time_limit: 15
         })
       });
 
