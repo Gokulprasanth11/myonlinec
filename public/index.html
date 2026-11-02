@@ -68,6 +68,14 @@
           <span>Run</span>
           <span class="keybinding">Ctrl+↵</span>
         </button>
+        <div class="user-badge" title="Logged in">
+          <i class="codicon codicon-account"></i>
+          <span id="user-display">gokul</span>
+        </div>
+        <button id="logout-btn" class="titlebar-btn logout-btn" title="Sign Out">
+          <i class="codicon codicon-sign-out"></i>
+          <span>Logout</span>
+        </button>
       </div>
     </header>
 
@@ -75,6 +83,25 @@
     <div class="workbench-body">
       <!-- File Explorer Sidebar -->
       <aside class="sidebar" id="sidebar">
+        <!-- Projects Section -->
+        <div class="sidebar-section projects-section">
+          <div class="sidebar-header">
+            <span class="sidebar-title">PROJECTS</span>
+            <div class="sidebar-actions">
+              <button id="btn-new-project" class="action-btn" title="New Project">
+                <i class="codicon codicon-add"></i>
+              </button>
+              <button id="btn-delete-project" class="action-btn danger-btn" title="Delete Current Project">
+                <i class="codicon codicon-trash"></i>
+              </button>
+            </div>
+          </div>
+          <div class="project-switcher">
+            <select id="project-select" class="project-select" title="Switch project"></select>
+          </div>
+        </div>
+
+        <!-- File Explorer Section -->
         <div class="sidebar-header">
           <span class="sidebar-title">EXPLORER</span>
           <div class="sidebar-actions">

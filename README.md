@@ -31,9 +31,11 @@ A modern, fast, and responsive web-based C online compiler powered by the [Onlin
 ## Quick Start
 
 ### 1. Verify Configuration
-Ensure `.env` contains your OnlineCompiler.io credentials:
+Create `.env` (it is not committed) with your OnlineCompiler.io key and the sign-in account:
 ```env
-ONLINECOMPILER_API_KEY=31f4de3b8255d41916bf6532b8123c17
+ONLINECOMPILER_API_KEY=your_api_key_here
+APP_USERNAME=gokul
+APP_PASSWORD=choose-a-password
 PORT=3000
 ```
 
@@ -48,10 +50,12 @@ node --env-file=.env server.js
 ```
 
 ### 3. Open in Browser
-Visit:
-```
-http://localhost:3000
-```
+Visit `http://localhost:3000` and sign in. After that you can keep several projects, and inside a project several folders.
+
+- **New project** (sidebar **+**) is a separate application workspace.
+- **New folder**, or `mkdir apps/demo` in the terminal, groups files. A folder with its own `main.c` is its own application.
+- **Run** compiles the open `.c` file. The play icon on a file or folder runs that application. In the terminal: `run apps/greet/main.c`.
+- Sources that have no `main` are compiled together with the application you run. Other files that have their own `main` stay out of that build.
 
 ---
 
@@ -66,6 +70,8 @@ c:\myonlinec\
 ├── server.js           # Lightweight Node.js HTTP server & API proxy
 └── public/             # Frontend assets
     ├── index.html      # Main application markup
+    ├── login.html      # Sign-in page
+    ├── login.css       # Sign-in styling
     ├── style.css       # IDE dark styling
     └── app.js          # Editor setup, templates, and execution handler
 ```

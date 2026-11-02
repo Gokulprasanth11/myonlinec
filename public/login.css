@@ -1,0 +1,290 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   login.css  —  MyOnlineC Login Page Styles
+   ────────────────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg:          #1e1e1e;
+  --bg2:         #252526;
+  --bg3:         #2d2d30;
+  --border:      #3e3e42;
+  --accent:      #0078d4;
+  --accent-h:    #1a8fff;
+  --text:        #cccccc;
+  --text-dim:    #858585;
+  --text-bright: #ffffff;
+  --green:       #4ec9b0;
+  --red:         #f44747;
+  --logo-badge:  #0078d4;
+}
+
+body {
+  font-family: 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* ── Animated background ── */
+.login-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bg-code {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-12deg);
+  opacity: 0.04;
+  font-size: clamp(14px, 2vw, 20px);
+  white-space: nowrap;
+  color: var(--green);
+  animation: drift 30s ease-in-out infinite alternate;
+}
+
+@keyframes drift {
+  from { transform: translate(-50%, -50%) rotate(-12deg) scale(1.0); }
+  to   { transform: translate(-50%, -50%) rotate(-12deg) scale(1.08) translateY(-20px); }
+}
+
+/* ── Wrapper & Card ── */
+.login-wrapper {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 24px;
+}
+
+.login-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 400px;
+  padding: 40px 36px 32px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.04);
+  animation: cardIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+/* ── Logo ── */
+.login-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+  justify-content: center;
+}
+
+.logo-badge {
+  background: var(--logo-badge);
+  color: #fff;
+  font-weight: 700;
+  font-size: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: -1px;
+}
+
+.logo-text {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-bright);
+  letter-spacing: -0.3px;
+}
+
+.logo-text .highlight {
+  color: var(--accent);
+}
+
+.login-subtitle {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 32px;
+  letter-spacing: 0.3px;
+}
+
+/* ── Form ── */
+.field-group {
+  margin-bottom: 18px;
+}
+
+.field-group label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 12px;
+  width: 15px;
+  height: 15px;
+  color: var(--text-dim);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+.input-wrap input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-bright);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 9px 40px 9px 36px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-wrap input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.25);
+}
+
+.input-wrap input::placeholder {
+  color: var(--text-dim);
+  opacity: 0.7;
+}
+
+.pw-toggle {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-dim);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.pw-toggle:hover { color: var(--text); }
+
+.pw-toggle svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* ── Error box ── */
+.login-error {
+  background: rgba(244, 71, 71, 0.12);
+  border: 1px solid rgba(244, 71, 71, 0.35);
+  border-radius: 6px;
+  color: #f97171;
+  font-size: 12px;
+  padding: 9px 12px;
+  margin-bottom: 16px;
+  animation: shake 0.4s ease;
+}
+
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  20%,60% { transform: translateX(-5px); }
+  40%,80% { transform: translateX(5px); }
+}
+
+.hidden { display: none !important; }
+
+/* ── Sign-in button ── */
+.sign-in-btn {
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.2s, transform 0.1s;
+  margin-top: 8px;
+  letter-spacing: 0.3px;
+}
+
+.sign-in-btn:hover:not(:disabled) { background: var(--accent-h); }
+.sign-in-btn:active:not(:disabled) { transform: scale(0.98); }
+.sign-in-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+/* Spinner */
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Footer ── */
+.login-footer {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-top: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  display: inline-block;
+  margin-right: 2px;
+}
+

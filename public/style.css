@@ -342,6 +342,14 @@ html, body {
   background: rgba(255, 255, 255, 0.15);
 }
 
+.node-action-btn.run-node-btn {
+  color: #89d185;
+}
+
+.node-action-btn.run-node-btn:hover {
+  color: #b5e8b2;
+}
+
 /* 4. Main Editor Area */
 .editor-area {
   flex: 1;
@@ -904,4 +912,38 @@ html, body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 100, 100, 0.7);
+}
+
+/* ── Project Switcher (sidebar) ─────────────────────────────────────────── */
+.projects-section {
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.project-switcher {
+  padding: 4px 10px 2px;
+}
+
+.project-select {
+  width: 100%;
+  background: #2b2b2b;
+  color: var(--text-bright);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: var(--vscode-font);
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.project-select:focus {
+  border-color: var(--accent-blue);
+}
+
+.danger-btn:hover {
+  color: #f48771 !important;
+  background: rgba(244, 135, 113, 0.12) !important;
 }

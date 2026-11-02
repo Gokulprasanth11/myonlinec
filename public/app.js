@@ -2,6 +2,21 @@
 (function () {
   'use strict';
 
+  // ── Auth Guard ───────────────────────────────────────────────────────────
+  const SESSION_TOKEN = localStorage.getItem('myonlinec_token');
+  if (!SESSION_TOKEN) {
+    window.location.replace('/login.html');
+    return;
+  }
+  function authHeaders() {
+    return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SESSION_TOKEN}` };
+  }
+  function handleUnauthorized() {
+    localStorage.removeItem('myonlinec_token');
+    localStorage.removeItem('myonlinec_user');
+    window.location.replace('/login.html');
+  }
+
   // Sample templates with folder support
   const SAMPLES = {
     folders_project: {
@@ -24,9 +39,11 @@ int main() {
     printf("Power:    %d ^ 3  = %d\\n", a, power(a, 3));
     printf("Cube:     cube(%d) = %d\\n", b, cube(b));
 
+    project_banner();
     printf("\\nOrganized inside:\\n");
     printf("  - include/math_utils.h\\n");
-    printf("  - main.c\\n");
+    printf("  - src/banner.c\\n");
+    printf("  - apps/greet/main.c (separate application)\\n");
     return 0;
 }
 `
@@ -59,6 +76,8 @@ static inline int cube(int x) {
     return x * x * x;
 }
 
+void project_banner(void);
+
 #endif // MATH_UTILS_H
 `
         },
@@ -71,8 +90,40 @@ static inline int cube(int x) {
           parent: 'src',
           content: `Project Notes:
 - Header files are in include/
-- Application entry is main.c
-- Run with Ctrl + Enter
+- Shared sources without main() are linked into whichever application you run
+- main.c and apps/greet/main.c are separate applications
+- Run a file with the play icon, or: run apps/greet/main.c
+`
+        },
+        'src/banner.c': {
+          type: 'file',
+          parent: 'src',
+          content: `#include <stdio.h>
+
+void project_banner(void) {
+    printf("Linked from src/banner.c\\n");
+}
+`
+        },
+        'apps': {
+          type: 'folder',
+          parent: ''
+        },
+        'apps/greet': {
+          type: 'folder',
+          parent: 'apps'
+        },
+        'apps/greet/main.c': {
+          type: 'file',
+          parent: 'apps/greet',
+          content: `#include <stdio.h>
+#include "math_utils.h"
+
+int main() {
+    printf("Greet application\\n");
+    printf("add(2, 3) = %d\\n", add(2, 3));
+    return 0;
+}
 `
         }
       },
@@ -285,10 +336,40 @@ int main() {
     }
   };
 
+  // ── Project Management ────────────────────────────────────────────────────
+  const PROJECTS_KEY     = 'myonlinec_projects';      // array of project names
+  const ACTIVE_PROJ_KEY  = 'myonlinec_active_project';
+
+  function getProjectList() {
+    try { return JSON.parse(localStorage.getItem(PROJECTS_KEY)) || ['Default Project']; }
+    catch { return ['Default Project']; }
+  }
+
+  function saveProjectList(list) {
+    localStorage.setItem(PROJECTS_KEY, JSON.stringify(list));
+  }
+
+  function getVfsKey(name) { return `myonlinec_vfs_${name}`; }
+
+  function loadProjectVfs(name) {
+    try {
+      const raw = localStorage.getItem(getVfsKey(name));
+      return raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(SAMPLES.folders_project.vfs));
+    } catch { return JSON.parse(JSON.stringify(SAMPLES.folders_project.vfs)); }
+  }
+
+  function saveProjectVfs(name, data) {
+    try { localStorage.setItem(getVfsKey(name), JSON.stringify(data)); } catch (e) { console.warn(e); }
+  }
+
+  let projectList    = getProjectList();
+  let currentProject = localStorage.getItem(ACTIVE_PROJ_KEY) || projectList[0];
+  if (!projectList.includes(currentProject)) { currentProject = projectList[0]; }
+
   // State Management with LocalStorage persistence
-  const savedVfs = localStorage.getItem('myonlinec_vfs');
+  const savedVfs = localStorage.getItem(getVfsKey(currentProject));
   let vfs = savedVfs ? JSON.parse(savedVfs) : JSON.parse(JSON.stringify(SAMPLES.folders_project.vfs));
-  let expandedFolders = new Set(['include', 'src']);
+  let expandedFolders = new Set(['include', 'src', 'apps', 'apps/greet']);
   let openTabs = ['main.c'];
   if (vfs['include/math_utils.h']) openTabs.push('include/math_utils.h');
   let activeFilePath = 'main.c';
@@ -354,7 +435,7 @@ int main() {
 
   function saveVfs() {
     try {
-      localStorage.setItem('myonlinec_vfs', JSON.stringify(vfs));
+      saveProjectVfs(currentProject, vfs);
     } catch (e) {
       console.warn('LocalStorage save failed:', e);
     }
@@ -413,11 +494,13 @@ int main() {
           const arrowIcon = isExpanded ? 'chevron-down' : 'chevron-right';
           const folderIcon = isExpanded ? 'folder-opened' : 'folder';
 
+          const canRunFolder = Boolean(folderAppPath(item.path));
           node.innerHTML = `
             <span class="tree-arrow"><i class="codicon codicon-${arrowIcon}"></i></span>
             <span class="tree-icon icon-folder"><i class="codicon codicon-${folderIcon}"></i></span>
             <span class="tree-label">${getBasename(item.path)}</span>
             <div class="tree-node-actions">
+              ${canRunFolder ? '<button class="node-action-btn run-node-btn" title="Run the application in this folder"><i class="codicon codicon-play"></i></button>' : ''}
               <button class="node-action-btn btn-add-in-folder" title="New file in folder"><i class="codicon codicon-new-file"></i></button>
               <button class="node-action-btn btn-delete-node" title="Delete folder"><i class="codicon codicon-trash"></i></button>
             </div>
@@ -431,6 +514,12 @@ int main() {
               expandedFolders.add(item.path);
             }
             renderFileTree();
+          });
+
+          const runFolderBtn = node.querySelector('.run-node-btn');
+          runFolderBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            runCode(item.path);
           });
 
           const addBtn = node.querySelector('.btn-add-in-folder');
@@ -451,11 +540,13 @@ int main() {
             renderBranch(item.path, depth + 1);
           }
         } else {
+          const isCFile = item.path.toLowerCase().endsWith('.c');
           node.innerHTML = `
             <span class="tree-arrow"></span>
             ${getFileIcon(item.path)}
             <span class="tree-label">${getBasename(item.path)}</span>
             <div class="tree-node-actions">
+              ${isCFile ? '<button class="node-action-btn run-node-btn" title="Compile and run this file"><i class="codicon codicon-play"></i></button>' : ''}
               <button class="node-action-btn btn-delete-node" title="Delete file"><i class="codicon codicon-trash"></i></button>
             </div>
           `;
@@ -463,6 +554,13 @@ int main() {
           node.addEventListener('click', (e) => {
             if (e.target.closest('.node-action-btn')) return;
             openFile(item.path);
+          });
+
+          const runFileBtn = node.querySelector('.run-node-btn');
+          runFileBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openFile(item.path);
+            runCode(item.path);
           });
 
           const delBtn = node.querySelector('.btn-delete-node');
@@ -594,21 +692,31 @@ int main() {
 
   // New Folder Creator
   function promptNewFolder(folderNameArg) {
-    const folderName = folderNameArg || prompt('Enter new folder name (e.g. include, src, tests):');
-    if (!folderName) return;
+    const folderName = folderNameArg || prompt('Enter new folder name (e.g. include, src, apps/demo):');
+    if (!folderName) return false;
 
-    const trimmed = folderName.trim().replace(/^[\/\\]+|[\/\\]+$/g, '');
-    if (!trimmed) return;
+    const trimmed = folderName.trim().replace(/^[\/\\]+|[\/\\]+$/g, '').replace(/\\/g, '/');
+    if (!trimmed) return false;
 
     if (vfs[trimmed]) {
       if (!folderNameArg) alert(`Folder "${trimmed}" already exists.`);
-      return;
+      return false;
     }
 
-    vfs[trimmed] = { type: 'folder', parent: '' };
-    expandedFolders.add(trimmed);
+    const parts = trimmed.split('/');
+    let currentPath = '';
+    for (let i = 0; i < parts.length; i++) {
+      currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
+      if (!vfs[currentPath]) {
+        const parentOfFolder = i > 0 ? parts.slice(0, i).join('/') : '';
+        vfs[currentPath] = { type: 'folder', parent: parentOfFolder };
+      }
+      expandedFolders.add(currentPath);
+    }
+
     saveVfs();
     renderFileTree();
+    return true;
   }
 
   // Delete Node
@@ -742,55 +850,177 @@ int main() {
     terminalScrollArea.scrollTop = terminalScrollArea.scrollHeight;
   }
 
+  function fileHasMain(content) {
+    return /^\s*(?:int|void)\s+main\s*\(/m.test(String(content || ''));
+  }
+
+  function folderAppPath(folderPath) {
+    const prefix = `${folderPath}/`;
+    const cFiles = Object.keys(vfs).filter((p) => (
+      vfs[p].type === 'file' && p.startsWith(prefix) && p.toLowerCase().endsWith('.c')
+    ));
+    return cFiles.find((p) => p === `${prefix}main.c`)
+      || cFiles.find((p) => fileHasMain(vfs[p].content))
+      || null;
+  }
+
+  function resolveRunTarget(customFile) {
+    if (!customFile) return activeFilePath || 'main.c';
+    const cleaned = String(customFile).trim().replace(/^[\/\\]+|[\/\\]+$/g, '').replace(/\\/g, '/');
+    if (vfs[cleaned]?.type === 'file') return cleaned;
+    if (vfs[cleaned]?.type === 'folder') return folderAppPath(cleaned);
+    const matches = Object.keys(vfs).filter((p) => (
+      vfs[p].type === 'file' && (p === cleaned || p.endsWith(`/${cleaned}`))
+    ));
+    return matches.length === 1 ? matches[0] : cleaned;
+  }
+
+  const SANDBOX_RESERVED = new Set(['input', 'run.sh', 'build', 'build.tar', 'go-trim.txt']);
+
+  function sandboxNameFor(filePath, used) {
+    let base = filePath.split('/').pop().replace(/[^A-Za-z0-9._-]/g, '_');
+    if (!/^[A-Za-z0-9]/.test(base)) base = `f_${base || 'file.txt'}`;
+    if (base.split('.')[0] === 'code') base = `src_${base}`;
+    let candidate = base.slice(0, 100);
+    let i = 2;
+    while (used.has(candidate) || SANDBOX_RESERVED.has(candidate) || candidate.split('.')[0] === 'code') {
+      const dot = base.lastIndexOf('.');
+      const stem = (dot === -1 ? base : base.slice(0, dot)).slice(0, 80);
+      const ext = dot === -1 ? '' : base.slice(dot);
+      candidate = `${stem}_${i}${ext}`.slice(0, 100);
+      i += 1;
+    }
+    used.add(candidate);
+    return candidate;
+  }
+
+  function rewriteLocalIncludes(content, alias) {
+    return String(content || '').replace(/#\s*include\s*"([^"]+)"/g, (full, incPath) => {
+      const norm = incPath.replace(/\\/g, '/').replace(/^\.\//, '');
+      const key = alias.has(norm) ? norm : (alias.has(norm.split('/').pop()) ? norm.split('/').pop() : null);
+      if (!key) return full;
+      const target = alias.get(key);
+      if (!target) return `/* inlined ${norm} */`;
+      return `#include "${target}"`;
+    });
+  }
+
+  function prepareCompilation(entryPath) {
+    const headers = [];
+    const libraries = [];
+    const otherApps = [];
+
+    for (const [path, item] of Object.entries(vfs)) {
+      if (item.type !== 'file' || path === entryPath) continue;
+      const ext = path.includes('.') ? path.split('.').pop().toLowerCase() : '';
+      if (ext === 'h') headers.push(path);
+      else if (ext === 'c') {
+        if (fileHasMain(item.content)) otherApps.push(path);
+        else libraries.push(path);
+      }
+    }
+
+    headers.sort();
+    libraries.sort();
+    otherApps.sort();
+
+    const used = new Set();
+    const alias = new Map();
+    const headerFiles = [];
+    const inlined = [];
+
+    headers.forEach((path) => {
+      const name = sandboxNameFor(path, used);
+      if (headerFiles.length < 8) {
+        alias.set(path, name);
+        const base = path.split('/').pop();
+        if (!alias.has(base)) alias.set(base, name);
+        headerFiles.push({ name, content: vfs[path].content || '' });
+      } else {
+        alias.set(path, '');
+        const base = path.split('/').pop();
+        if (!alias.has(base)) alias.set(base, '');
+        inlined.push(path);
+      }
+    });
+
+    const parts = [];
+    inlined.forEach((path) => {
+      parts.push(`/* inlined ${path} */\n${vfs[path].content || ''}`);
+    });
+    libraries.forEach((path) => {
+      parts.push(`/* ${path} */\n${rewriteLocalIncludes(vfs[path].content, alias)}`);
+    });
+    parts.push(`/* ${entryPath} */\n${rewriteLocalIncludes(vfs[entryPath].content, alias)}`);
+
+    return {
+      code: parts.join('\n\n'),
+      files: headerFiles,
+      libraries,
+      otherApps,
+    };
+  }
+
   // Code Execution Engine
   async function runCode(customFile) {
-    if (vfs[activeFilePath]) {
+    if (vfs[activeFilePath] && vfs[activeFilePath].type === 'file') {
       vfs[activeFilePath].content = getEditorValue();
       saveVfs();
     }
 
-    const targetPath = customFile || activeFilePath || 'main.c';
-    const mainFile = vfs[targetPath] || vfs['main.c'];
-    const mainCode = mainFile?.content || '';
+    const targetPath = resolveRunTarget(customFile);
+    const mainFile = targetPath ? vfs[targetPath] : null;
     const compiler = compilerSelect.value || 'gcc-15';
     const input = stdinInput.value;
 
-    if (!mainCode.trim()) {
-      alert(`No C code found to compile in "${targetPath}".`);
-      return;
-    }
-
-    // Collect all secondary files
-    const secondaryFiles = [];
-    for (const [path, item] of Object.entries(vfs)) {
-      if (item.type === 'file' && path !== targetPath) {
-        secondaryFiles.push({
-          name: getBasename(path),
-          content: item.content
-        });
-      }
-    }
-
-    runBtn.disabled = true;
     bottomPanel?.classList.remove('collapsed');
     switchPanelTab('terminal');
 
-    appendTerminal(`\n<span class="stdout-line">[Compiling ${getBasename(targetPath)} with ${compiler}...]</span>\n`);
+    if (!mainFile || mainFile.type !== 'file') {
+      appendTerminal(`<span class="stderr-line">No application found${customFile ? ` for "${escapeHtml(String(customFile))}"` : ''}. Open a .c file, or run a folder that contains main.</span>\n`);
+      return;
+    }
+    if (!targetPath.toLowerCase().endsWith('.c')) {
+      appendTerminal(`<span class="stderr-line">"${escapeHtml(targetPath)}" is not a C source file.</span>\n`);
+      return;
+    }
+
+    const built = prepareCompilation(targetPath);
+    if (!built.code.trim()) {
+      appendTerminal(`<span class="stderr-line">No C code found to compile in "${escapeHtml(targetPath)}".</span>\n`);
+      return;
+    }
+    if (built.code.length > 100000) {
+      appendTerminal(`<span class="stderr-line">This application is too large to compile (${built.code.length} characters; limit is 100000).</span>\n`);
+      return;
+    }
+
+    runBtn.disabled = true;
+
+    let note = `\n<span class="stdout-line">[Application ${escapeHtml(targetPath)} · ${escapeHtml(compiler)}]</span>\n`;
+    if (built.libraries.length) {
+      note += `<span class="stdout-line">[Also compiling ${escapeHtml(built.libraries.join(', '))}]</span>\n`;
+    }
+    if (built.otherApps.length) {
+      note += `<span class="stdout-line">[Other applications left out: ${escapeHtml(built.otherApps.join(', '))}. Run one with the play button or: run &lt;path&gt;]</span>\n`;
+    }
+    appendTerminal(note);
     statusStatusText.innerHTML = '<i class="codicon codicon-sync"></i><span>Compiling...</span>';
 
     try {
       const response = await fetch('/api/run', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({
           compiler: compiler,
-          code: mainCode,
-          files: secondaryFiles,
+          code: built.code,
+          files: built.files,
           input: input,
           time_limit: 15
         })
       });
 
+      if (response.status === 401) { handleUnauthorized(); return; }
       const result = await response.json();
       const data = result.data || {};
       const stdout = data.output || '';
@@ -881,7 +1111,7 @@ int main() {
       case 'help':
         appendTerminal(`
 <span class="stdout-line">Available Terminal Commands:</span>
-  <span class="prompt-user">run [file]</span>       - Compile & run main.c or specific application
+  <span class="prompt-user">run [file|folder]</span> - Compile one application. Shared .c files are included; other mains are not
   <span class="prompt-user">git push</span>         - Push all project files & folders to GitHub
   <span class="prompt-user">git status</span>       - View files in virtual project tree
   <span class="prompt-user">ls / dir</span>         - List files and folders
@@ -931,9 +1161,10 @@ ${Object.keys(vfs).map(p => `  <span style="color: #89d185;">${escapeHtml(p)}</s
       case 'mkdir':
         if (!arg1) {
           appendTerminal('<span class="stderr-line">mkdir: missing operand</span>\n');
-        } else {
-          promptNewFolder(arg1);
+        } else if (promptNewFolder(arg1)) {
           appendTerminal(`<span class="stdout-line">Created directory: ${escapeHtml(arg1)}</span>\n`);
+        } else if (vfs[arg1]) {
+          appendTerminal(`<span class="stderr-line">mkdir: cannot create '${escapeHtml(arg1)}': File exists</span>\n`);
         }
         break;
 
@@ -1033,7 +1264,7 @@ ${Object.keys(vfs).map(p => `  <span style="color: #89d185;">${escapeHtml(p)}</s
     try {
       const response = await fetch('/api/github/push', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders(),
         body: JSON.stringify({
           token,
           owner,
@@ -1045,6 +1276,7 @@ ${Object.keys(vfs).map(p => `  <span style="color: #89d185;">${escapeHtml(p)}</s
       });
 
       const result = await response.json();
+      if (response.status === 401) { handleUnauthorized(); return; }
 
       if (!response.ok || !result.success) {
         ghStatus.className = 'gh-status error';
@@ -1080,7 +1312,7 @@ ${Object.keys(vfs).map(p => `  <span style="color: #89d185;">${escapeHtml(p)}</s
       vfs = JSON.parse(JSON.stringify(sample.vfs));
       openTabs = ['main.c'];
       if (vfs['include/math_utils.h']) openTabs.push('include/math_utils.h');
-      expandedFolders = new Set(['include', 'src']);
+      expandedFolders = new Set(['include', 'src', 'apps', 'apps/greet']);
       activeFilePath = 'main.c';
       if (sample.compiler) compilerSelect.value = sample.compiler;
       setEditorValue(vfs['main.c']?.content || '', 'main.c');
@@ -1158,6 +1390,101 @@ ${Object.keys(vfs).map(p => `  <span style="color: #89d185;">${escapeHtml(p)}</s
       bottomPanel.classList.toggle('collapsed');
     }
   });
+
+  // ── Project Switcher Logic ────────────────────────────────────────────────
+  function renderProjectSelector() {
+    const sel = document.getElementById('project-select');
+    const nameEl = document.getElementById('project-name-display');
+    if (!sel) return;
+    sel.innerHTML = '';
+    projectList.forEach(name => {
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name;
+      if (name === currentProject) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    if (nameEl) nameEl.textContent = currentProject;
+  }
+
+  function switchProject(name) {
+    if (name === currentProject) return;
+    // Save current state
+    if (vfs[activeFilePath]) {
+      vfs[activeFilePath].content = getEditorValue();
+    }
+    saveProjectVfs(currentProject, vfs);
+
+    // Load new project
+    currentProject = name;
+    localStorage.setItem(ACTIVE_PROJ_KEY, name);
+    vfs = loadProjectVfs(name);
+    openTabs = ['main.c'].filter(p => vfs[p]);
+    if (!openTabs.length) openTabs = [Object.keys(vfs).find(k => vfs[k].type === 'file') || 'main.c'];
+    activeFilePath = openTabs[0];
+    expandedFolders = new Set(['include', 'src', 'apps', 'apps/greet']);
+    setEditorValue(vfs[activeFilePath]?.content || '', activeFilePath);
+    renderFileTree();
+    renderTabs();
+    renderProjectSelector();
+    appendTerminal(`<span class="stdout-line">Switched to project: <strong>${escapeHtml(name)}</strong></span>\n`);
+  }
+
+  function createProject(name) {
+    const trimmed = name?.trim();
+    if (!trimmed) return;
+    if (projectList.includes(trimmed)) {
+      switchProject(trimmed);
+      return;
+    }
+    projectList.push(trimmed);
+    saveProjectList(projectList);
+    // Initialize with default template
+    saveProjectVfs(trimmed, JSON.parse(JSON.stringify(SAMPLES.hello.vfs)));
+    switchProject(trimmed);
+  }
+
+  function deleteProject(name) {
+    if (projectList.length <= 1) {
+      alert('Cannot delete the last project.');
+      return;
+    }
+    if (!confirm(`Delete project "${name}" and all its files? This cannot be undone.`)) return;
+    const idx = projectList.indexOf(name);
+    projectList.splice(idx, 1);
+    saveProjectList(projectList);
+    localStorage.removeItem(getVfsKey(name));
+    switchProject(projectList[Math.max(0, idx - 1)]);
+  }
+
+  // Project UI listeners (elements added to sidebar in index.html)
+  document.getElementById('btn-new-project')?.addEventListener('click', () => {
+    const name = prompt('Enter new project name:');
+    if (name) createProject(name);
+  });
+
+  document.getElementById('btn-delete-project')?.addEventListener('click', () => {
+    deleteProject(currentProject);
+  });
+
+  document.getElementById('project-select')?.addEventListener('change', (e) => {
+    switchProject(e.target.value);
+  });
+
+  // Logout button
+  document.getElementById('logout-btn')?.addEventListener('click', async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', headers: authHeaders() });
+    } catch { /* ignore */ }
+    handleUnauthorized();
+  });
+
+  // Show current logged-in user
+  const loggedInUser = localStorage.getItem('myonlinec_user') || 'gokul';
+  const userDisplayEl = document.getElementById('user-display');
+  if (userDisplayEl) userDisplayEl.textContent = loggedInUser;
+
+  renderProjectSelector();
 
   // Start IDE
   initMonaco();
