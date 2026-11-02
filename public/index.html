@@ -3,164 +3,290 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MyOnlineC - Modern Online C Compiler</title>
+  <title>MyOnlineC - Visual Studio Code</title>
   <link rel="stylesheet" href="style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Segoe+UI:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Codicons for authentic VS Code icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codicons/0.0.36/codicon.min.css">
 </head>
-<body class="dark-theme">
-  <div class="app-container">
-    <!-- Top Navigation Bar -->
-    <header class="app-header">
-      <div class="header-left">
-        <div class="logo">
-          <span class="logo-icon">C</span>
-          <span class="logo-title">MyOnline<span class="highlight">C</span></span>
+<body class="vscode-dark">
+  <div class="workbench">
+    <!-- VS Code Title Bar -->
+    <header class="titlebar">
+      <div class="titlebar-left">
+        <div class="app-icon" title="MyOnlineC IDE">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M17.5 2.5L7.5 8L17.5 13.5V2.5Z" fill="#007ACC"/><path d="M17.5 13.5L7.5 19L17.5 24.5V13.5Z" fill="#007ACC" opacity="0.8"/><path d="M6.5 19L1.5 16V11L6.5 8V19Z" fill="#007ACC" opacity="0.6"/></svg>
         </div>
-        <div class="badge-tag">GCC 15</div>
+        <nav class="menubar">
+          <div class="menu-item">File</div>
+          <div class="menu-item">Edit</div>
+          <div class="menu-item">Selection</div>
+          <div class="menu-item">View</div>
+          <div class="menu-item">Go</div>
+          <div class="menu-item">Run</div>
+          <div class="menu-item">Terminal</div>
+          <div class="menu-item">Help</div>
+        </nav>
       </div>
 
-      <div class="header-center">
-        <div class="control-group">
-          <label for="sample-select">Template:</label>
-          <select id="sample-select" title="Load sample code">
-            <option value="hello">Hello, World!</option>
-            <option value="multi_file">Multi-File (main.c + math_utils.h)</option>
-            <option value="ldd_inspect">Inspect Dynamic Libraries (ldd)</option>
-            <option value="makefile_project">Makefile Project (Bash + Makefile)</option>
-            <option value="sum">Sum of Two Numbers (stdin)</option>
-            <option value="fibonacci">Fibonacci Series</option>
-            <option value="pointers">Pointers & Memory</option>
-            <option value="bubble_sort">Bubble Sort</option>
-          </select>
-        </div>
-
-        <div class="control-group">
-          <label for="compiler-select">Compiler:</label>
-          <select id="compiler-select" title="Select compiler/environment">
-            <option value="gcc-15" selected>GCC 15 (C)</option>
-            <option value="clang-21">Clang 21 (C)</option>
-            <option value="bash-5.2">Bash 5.2 (Make / Shell / ldd)</option>
-          </select>
+      <div class="titlebar-center">
+        <span id="window-title" class="window-title">main.c — MyOnlineC [VS Code]</span>
+        <div class="quick-selectors">
+          <div class="select-wrapper">
+            <span class="select-label">Template:</span>
+            <select id="sample-select" title="Load sample project">
+              <option value="hello">Hello, World!</option>
+              <option value="folders_project">Project with Folders (include/ & src/)</option>
+              <option value="multi_file">Multi-File (main.c + math_utils.h)</option>
+              <option value="ldd_inspect">Inspect Dynamic Libraries (ldd)</option>
+              <option value="sum">Sum of Two Numbers (stdin)</option>
+              <option value="fibonacci">Fibonacci Series</option>
+              <option value="pointers">Pointers & Memory</option>
+              <option value="bubble_sort">Bubble Sort</option>
+            </select>
+          </div>
+          <div class="select-wrapper">
+            <span class="select-label">Compiler:</span>
+            <select id="compiler-select" title="Target compiler">
+              <option value="gcc-15" selected>GCC 15 (C)</option>
+              <option value="clang-21">Clang 21 (C)</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      <div class="header-right">
-        <button id="download-btn" class="btn btn-secondary" title="Download C source file">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Export .c
-        </button>
-        <button id="reset-btn" class="btn btn-secondary" title="Reset to template">
-          Reset
-        </button>
-        <button id="run-btn" class="btn btn-primary" title="Execute program (Ctrl + Enter)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      <div class="titlebar-right">
+        <button id="run-btn" class="titlebar-btn run-btn" title="Run Code (Ctrl + Enter)">
+          <i class="codicon codicon-play"></i>
           <span>Run</span>
-          <span class="shortcut-pill">Ctrl+↵</span>
+          <span class="keybinding">Ctrl+↵</span>
         </button>
+        <button id="download-btn" class="titlebar-btn" title="Export Current File">
+          <i class="codicon codicon-cloud-download"></i>
+          <span>Export</span>
+        </button>
+        <div class="window-controls">
+          <span class="win-btn win-minimize" title="Minimize">─</span>
+          <span class="win-btn win-maximize" title="Maximize">□</span>
+          <span class="win-btn win-close" title="Close">✕</span>
+        </div>
       </div>
     </header>
 
-    <!-- Main Workspace Split -->
-    <main class="workspace">
-      <!-- Editor Column -->
-      <section class="editor-pane">
-        <div class="pane-header file-tabs-header">
-          <div id="file-tabs-bar" class="file-tabs-bar">
+    <!-- Main Content Area -->
+    <div class="workbench-body">
+      <!-- Activity Bar (Far Left) -->
+      <aside class="activity-bar">
+        <div class="activity-bar-top">
+          <button class="activity-btn active" id="act-explorer" title="Explorer (Ctrl+Shift+E)">
+            <i class="codicon codicon-files"></i>
+          </button>
+          <button class="activity-btn" id="act-search" title="Search (Ctrl+Shift+F)">
+            <i class="codicon codicon-search"></i>
+          </button>
+          <button class="activity-btn" id="act-scm" title="Source Control (Ctrl+Shift+G)">
+            <i class="codicon codicon-source-control"></i>
+            <span class="badge">1</span>
+          </button>
+          <button class="activity-btn" id="act-run" title="Run & Debug (Ctrl+Shift+D)">
+            <i class="codicon codicon-run-all"></i>
+          </button>
+          <button class="activity-btn" id="act-extensions" title="Extensions (Ctrl+Shift+X)">
+            <i class="codicon codicon-extensions"></i>
+          </button>
+        </div>
+        <div class="activity-bar-bottom">
+          <button class="activity-btn" title="Accounts">
+            <i class="codicon codicon-account"></i>
+          </button>
+          <button class="activity-btn" title="Settings">
+            <i class="codicon codicon-settings-gear"></i>
+          </button>
+        </div>
+      </aside>
+
+      <!-- Primary Sidebar (Explorer) -->
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-title">EXPLORER</span>
+          <div class="sidebar-actions">
+            <button id="btn-new-file" class="action-btn" title="New File">
+              <i class="codicon codicon-new-file"></i>
+            </button>
+            <button id="btn-new-folder" class="action-btn" title="New Folder">
+              <i class="codicon codicon-new-folder"></i>
+            </button>
+            <button id="btn-refresh" class="action-btn" title="Refresh Explorer">
+              <i class="codicon codicon-refresh"></i>
+            </button>
+            <button id="btn-collapse" class="action-btn" title="Collapse Folders">
+              <i class="codicon codicon-collapse-all"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="explorer-section">
+          <div class="section-header" id="section-header">
+            <i class="codicon codicon-chevron-down" id="section-arrow"></i>
+            <span class="project-name">MYONLINEC</span>
+          </div>
+          <!-- File Tree -->
+          <div class="file-tree" id="file-tree">
+            <!-- Dynamic tree nodes rendered by app.js -->
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Editor & Terminal Area -->
+      <main class="editor-area">
+        <!-- Editor Tabs -->
+        <div class="tabs-and-actions">
+          <div class="tabs-bar" id="editor-tabs">
             <!-- Dynamic tabs rendered by app.js -->
           </div>
-          <div class="tab-controls">
-            <button id="add-file-btn" class="icon-btn add-btn" title="Add new file (up to 8 files)">+ New File</button>
-            <div class="editor-actions">
-              <button id="format-btn" class="icon-btn" title="Format code">Format</button>
-              <button id="copy-code-btn" class="icon-btn" title="Copy code to clipboard">Copy</button>
-            </div>
+          <div class="editor-tab-actions">
+            <button id="format-btn" class="action-btn" title="Format Document (Shift+Alt+F)">
+              <i class="codicon codicon-symbol-keyword"></i>
+            </button>
+            <button id="copy-code-btn" class="action-btn" title="Copy Content">
+              <i class="codicon codicon-copy"></i>
+            </button>
+            <button id="toggle-panel-btn" class="action-btn" title="Toggle Terminal Panel (Ctrl+`)">
+              <i class="codicon codicon-layout-panel"></i>
+            </button>
           </div>
         </div>
-        
-        <div id="editor-container" class="editor-body">
-          <!-- Fallback textarea for when Monaco is loading or offline -->
-          <textarea id="fallback-editor" spellcheck="false" placeholder="// Write your C code here..."></textarea>
+
+        <!-- Breadcrumbs -->
+        <div class="breadcrumbs" id="breadcrumbs">
+          <span class="crumb root-crumb">myonlinec</span>
+          <span class="crumb-separator">›</span>
+          <span class="crumb active-crumb" id="active-crumb">main.c</span>
         </div>
 
-        <div class="editor-statusbar">
-          <div class="status-left">
-            <span id="editor-cursor-pos">Ln 1, Col 1</span>
-            <span class="separator">|</span>
-            <span id="editor-encoding">UTF-8</span>
-            <span class="separator">|</span>
-            <span>C (C17 / C23)</span>
-          </div>
-          <div class="status-right">
-            <span>Powered by OnlineCompiler.io</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- Sidebar Column (Input & Output) -->
-      <section class="output-pane">
-        <!-- Input section -->
-        <div class="io-box input-box">
-          <div class="pane-header">
-            <div class="pane-title">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
-              <span>Standard Input (stdin)</span>
-            </div>
-            <button id="clear-stdin-btn" class="icon-btn" title="Clear input">Clear</button>
-          </div>
-          <textarea id="stdin-input" placeholder="Type standard input here for programs using scanf() or getchar()..."></textarea>
+        <!-- Monaco Editor Container -->
+        <div class="editor-viewport" id="editor-viewport">
+          <div id="monaco-container" class="monaco-container"></div>
+          <textarea id="fallback-editor" spellcheck="false" class="fallback-editor"></textarea>
         </div>
 
-        <!-- Output section -->
-        <div class="io-box output-box">
-          <div class="pane-header">
-            <div class="pane-title">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
-              <span>Terminal Output</span>
+        <!-- VS Code Bottom Panel (Drawer) -->
+        <div class="bottom-panel" id="bottom-panel">
+          <div class="panel-header">
+            <div class="panel-tabs">
+              <button class="panel-tab active" data-tab="terminal">
+                <span>TERMINAL</span>
+              </button>
+              <button class="panel-tab" data-tab="input">
+                <span>INPUT (STDIN)</span>
+              </button>
+              <button class="panel-tab" data-tab="problems">
+                <span>PROBLEMS</span>
+                <span class="badge-count" id="problems-count">0</span>
+              </button>
+              <button class="panel-tab" data-tab="output">
+                <span>EXECUTION STATS</span>
+              </button>
             </div>
-            <div class="header-actions">
-              <button id="copy-output-btn" class="icon-btn" title="Copy output">Copy</button>
-              <button id="clear-output-btn" class="icon-btn" title="Clear terminal">Clear</button>
-            </div>
-          </div>
-
-          <!-- Execution Metrics Banner -->
-          <div id="metrics-bar" class="metrics-bar hidden">
-            <div class="metric-item">
-              <span class="metric-label">Status:</span>
-              <span id="metric-status" class="metric-value status-badge">Ready</span>
-            </div>
-            <div class="metric-item">
-              <span class="metric-label">Exit Code:</span>
-              <span id="metric-exit-code" class="metric-value">-</span>
-            </div>
-            <div class="metric-item">
-              <span class="metric-label">Time:</span>
-              <span id="metric-time" class="metric-value">-</span>
-            </div>
-            <div class="metric-item">
-              <span class="metric-label">Memory:</span>
-              <span id="metric-memory" class="metric-value">-</span>
+            <div class="panel-actions">
+              <button id="clear-terminal-btn" class="action-btn" title="Clear Terminal">
+                <i class="codicon codicon-clear-all"></i>
+              </button>
+              <button id="maximize-panel-btn" class="action-btn" title="Toggle Maximize Panel">
+                <i class="codicon codicon-chevron-up" id="maximize-icon"></i>
+              </button>
+              <button id="close-panel-btn" class="action-btn" title="Close Panel">
+                <i class="codicon codicon-close"></i>
+              </button>
             </div>
           </div>
 
-          <!-- Output Display Area -->
-          <div class="output-console-wrapper">
-            <pre id="output-console"><code class="console-placeholder">Click "Run" or press Ctrl+Enter to compile and run your code.</code></pre>
-            <div id="loading-overlay" class="loading-overlay hidden">
-              <div class="spinner"></div>
-              <span>Compiling & Executing...</span>
+          <div class="panel-content">
+            <!-- Terminal Tab Content -->
+            <div class="tab-pane active" id="pane-terminal">
+              <pre id="output-terminal" class="terminal-text"><span class="terminal-placeholder">Ready. Press [Ctrl + Enter] or click 'Run' to compile and execute your code.</span></pre>
+            </div>
+
+            <!-- Input Tab Content -->
+            <div class="tab-pane" id="pane-input">
+              <textarea id="stdin-input" class="stdin-box" placeholder="Type standard input here (stdin) for programs using scanf(), getchar(), etc."></textarea>
+            </div>
+
+            <!-- Problems Tab Content -->
+            <div class="tab-pane" id="pane-problems">
+              <div id="problems-list" class="problems-list">
+                <div class="no-problems">No problems have been detected in the workspace.</div>
+              </div>
+            </div>
+
+            <!-- Execution Stats Content -->
+            <div class="tab-pane" id="pane-output">
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <span class="stat-label">Execution Status</span>
+                  <span id="stat-status" class="stat-value status-ready">Ready</span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">Exit Code</span>
+                  <span id="stat-exit" class="stat-value">-</span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">CPU Runtime</span>
+                  <span id="stat-time" class="stat-value">-</span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">Memory Footprint</span>
+                  <span id="stat-memory" class="stat-value">-</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </section>
-    </main>
+      </main>
+    </div>
+
+    <!-- Status Bar (Bottom) -->
+    <footer class="statusbar">
+      <div class="statusbar-left">
+        <div class="status-item branch-item" title="Git Branch">
+          <i class="codicon codicon-git-branch"></i>
+          <span>master*</span>
+        </div>
+        <div class="status-item sync-item" title="OnlineCompiler.io connected">
+          <i class="codicon codicon-sync"></i>
+        </div>
+        <div class="status-item errors-item" title="Errors and Warnings">
+          <i class="codicon codicon-error"></i>
+          <span id="status-error-count">0</span>
+          <i class="codicon codicon-warning"></i>
+          <span id="status-warn-count">0</span>
+        </div>
+      </div>
+
+      <div class="statusbar-right">
+        <div class="status-item" id="status-cursor">Ln 1, Col 1</div>
+        <div class="status-item">Spaces: 4</div>
+        <div class="status-item">UTF-8</div>
+        <div class="status-item">LF</div>
+        <div class="status-item status-lang">
+          <i class="codicon codicon-code"></i>
+          <span id="status-lang-text">C</span>
+        </div>
+        <div class="status-item compiler-status" title="Current Compiler Engine">
+          <i class="codicon codicon-server"></i>
+          <span id="status-compiler-text">GCC 15</span>
+        </div>
+        <div class="status-item notification-item" title="Notifications">
+          <i class="codicon codicon-bell"></i>
+        </div>
+      </div>
+    </footer>
   </div>
 
-  <!-- Monaco Editor Loader from CDN with seamless fallback -->
+  <!-- Monaco Editor Loader -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
-

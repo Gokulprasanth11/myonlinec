@@ -1,44 +1,44 @@
-// MyOnlineC Frontend Script
+// MyOnlineC - VS Code Web IDE Implementation
 (function () {
   'use strict';
 
-  // Sample templates supporting single & multi-file projects
+  // Sample templates with folder support
   const SAMPLES = {
-    hello: {
+    folders_project: {
       compiler: 'gcc-15',
-      files: {
-        'main.c': `#include <stdio.h>
-
-int main() {
-    printf("Hello, World!\\n");
-    printf("Welcome to MyOnlineC Compiler!\\n");
-    return 0;
-}
-`
-      },
-      stdin: ''
-    },
-    multi_file: {
-      compiler: 'gcc-15',
-      files: {
-        'main.c': `#include <stdio.h>
+      vfs: {
+        'main.c': {
+          type: 'file',
+          parent: '',
+          content: `#include <stdio.h>
 #include "math_utils.h"
 
 int main() {
-    int x = 20, y = 8;
-    printf("======================================\\n");
-    printf("   Multi-File C Project in MyOnlineC  \\n");
-    printf("======================================\\n\\n");
+    printf("================================================\\n");
+    printf("   VS Code IDE: Folder & Multi-File C Project   \\n");
+    printf("================================================\\n\\n");
 
-    printf("Sum:      %d + %d = %d\\n", x, y, add(x, y));
-    printf("Multiply: %d * %d = %d\\n", x, y, multiply(x, y));
-    printf("Power:    %d ^ 3 = %d\\n", x, power(x, 3));
-    printf("Max:      max(%d, %d) = %d\\n", x, y, max(x, y));
+    int a = 24, b = 6;
+    printf("Add:      %d + %d = %d\\n", a, b, add(a, b));
+    printf("Multiply: %d * %d = %d\\n", a, b, multiply(a, b));
+    printf("Power:    %d ^ 3  = %d\\n", a, power(a, 3));
+    printf("Cube:     cube(%d) = %d\\n", b, cube(b));
 
+    printf("\\nOrganized inside:\\n");
+    printf("  - include/math_utils.h\\n");
+    printf("  - main.c\\n");
     return 0;
 }
-`,
-        'math_utils.h': `#ifndef MATH_UTILS_H
+`
+        },
+        'include': {
+          type: 'folder',
+          parent: ''
+        },
+        'include/math_utils.h': {
+          type: 'file',
+          parent: 'include',
+          content: `#ifndef MATH_UTILS_H
 #define MATH_UTILS_H
 
 static inline int add(int a, int b) {
@@ -50,26 +50,95 @@ static inline int multiply(int a, int b) {
 }
 
 static inline int power(int base, int exp) {
-    int result = 1;
-    for (int i = 0; i < exp; i++) {
-        result *= base;
-    }
-    return result;
+    int res = 1;
+    for (int i = 0; i < exp; i++) res *= base;
+    return res;
 }
 
-static inline int max(int a, int b) {
-    return (a > b) ? a : b;
+static inline int cube(int x) {
+    return x * x * x;
 }
 
 #endif // MATH_UTILS_H
 `
+        },
+        'src': {
+          type: 'folder',
+          parent: ''
+        },
+        'src/notes.txt': {
+          type: 'file',
+          parent: 'src',
+          content: `Project Notes:
+- Standard header files are in include/
+- Main application entry is main.c
+- Run with Ctrl + Enter
+`
+        }
+      },
+      stdin: ''
+    },
+    hello: {
+      compiler: 'gcc-15',
+      vfs: {
+        'main.c': {
+          type: 'file',
+          parent: '',
+          content: `#include <stdio.h>
+
+int main() {
+    printf("Hello, World!\\n");
+    printf("Welcome to MyOnlineC in VS Code!\\n");
+    return 0;
+}
+`
+        }
+      },
+      stdin: ''
+    },
+    multi_file: {
+      compiler: 'gcc-15',
+      vfs: {
+        'main.c': {
+          type: 'file',
+          parent: '',
+          content: `#include <stdio.h>
+#include "math_utils.h"
+
+int main() {
+    int x = 20, y = 8;
+    printf("======================================\\n");
+    printf("   Multi-File C Project in MyOnlineC  \\n");
+    printf("======================================\\n\\n");
+
+    printf("Sum:      %d + %d = %d\\n", x, y, add(x, y));
+    printf("Multiply: %d * %d = %d\\n", x, y, multiply(x, y));
+    return 0;
+}
+`
+        },
+        'math_utils.h': {
+          type: 'file',
+          parent: '',
+          content: `#ifndef MATH_UTILS_H
+#define MATH_UTILS_H
+
+static inline int add(int a, int b) { return a + b; }
+static inline int multiply(int a, int b) { return a * b; }
+
+#endif
+`
+        }
       },
       stdin: ''
     },
     ldd_inspect: {
       compiler: 'gcc-15',
-      files: {
-        'main.c': `#include <stdio.h>
+      vfs: {
+        'main.c': {
+          type: 'file',
+          parent: '',
+          content: `#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 
@@ -78,7 +147,6 @@ int main() {
     printf(" Dynamic Shared Library Inspection (ldd)           \\n");
     printf("===================================================\\n\\n");
 
-    // Math operation to pull in libm
     double val = sqrt(256.0);
     printf("Computed sqrt(256.0) = %.2f\\n\\n", val);
 
@@ -86,94 +154,21 @@ int main() {
     printf("---------------------------------------------------\\n");
     fflush(stdout);
 
-    // /proc/self/exe refers directly to the currently running process binary
-    int ret = system("ldd /proc/self/exe");
-    if (ret != 0) {
-        // Fallback: direct dynamic linker inspection
-        printf("\\nFallback to direct dynamic linker /lib64/ld-linux-x86-64.so.2:\\n");
-        system("/lib64/ld-linux-x86-64.so.2 --list /proc/self/exe");
-    }
-
+    system("ldd /proc/self/exe");
     return 0;
 }
 `
-      },
-      stdin: ''
-    },
-    makefile_project: {
-      compiler: 'bash-5.2',
-      files: {
-        'main.c': `# Execute Makefile and run compiled application
-echo "=========================================="
-echo " Building Project with Makefile via Make  "
-echo "=========================================="
-make clean
-make
-
-echo -e "\\n=========================================="
-echo " Checking Dynamic Dependencies (ldd)     "
-echo "=========================================="
-ldd ./app
-
-echo -e "\\n=========================================="
-echo " Executing Compiled Application (./app)  "
-echo "=========================================="
-./app
-`,
-        'Makefile': `CC = gcc
-CFLAGS = -Wall -Wextra -O2
-TARGET = app
-
-all: $(TARGET)
-
-$(TARGET): main.o utils.o
-	$(CC) $(CFLAGS) -o $(TARGET) main.o utils.o -lm
-
-main.o: app_main.c utils.h
-	$(CC) $(CFLAGS) -c app_main.c -o main.o
-
-utils.o: utils.c utils.h
-	$(CC) $(CFLAGS) -c utils.c -o utils.o
-
-clean:
-	rm -f *.o $(TARGET)
-`,
-        'app_main.c': `#include <stdio.h>
-#include "utils.h"
-
-int main() {
-    printf("Hello from C app compiled via Makefile!\\n");
-    greet("Gokul");
-    printf("Square of 12 is: %d\\n", square(12));
-    return 0;
-}
-`,
-        'utils.h': `#ifndef UTILS_H
-#define UTILS_H
-
-void greet(const char *name);
-int square(int x);
-
-#endif
-`,
-        'utils.c': `#include <stdio.h>
-#include "utils.h"
-
-void greet(const char *name) {
-    printf("Hello %s! This function was compiled from utils.c.\\n", name);
-}
-
-int square(int x) {
-    return x * x;
-}
-`
+        }
       },
       stdin: ''
     },
     sum: {
       compiler: 'gcc-15',
-      files: {
-        'main.c': `#include <stdio.h>
+      vfs: {
+        'main.c': {
+          type: 'file',
+          parent: '',
+          content: `#include <stdio.h>
 
 int main() {
     int a, b;
@@ -186,13 +181,17 @@ int main() {
     return 0;
 }
 `
+        }
       },
       stdin: '25 75'
     },
     fibonacci: {
       compiler: 'gcc-15',
-      files: {
-        'main.c': `#include <stdio.h>
+      vfs: {
+        'main.c': {
+          type: 'file',
+          parent: '',
+          content: `#include <stdio.h>
 
 void printFibonacci(int n) {
     long long t1 = 0, t2 = 1, next;
@@ -207,56 +206,58 @@ void printFibonacci(int n) {
 }
 
 int main() {
-    int terms = 12;
-    printFibonacci(terms);
+    printFibonacci(12);
     return 0;
 }
 `
+        }
       },
       stdin: ''
     },
     pointers: {
       compiler: 'gcc-15',
-      files: {
-        'main.c': `#include <stdio.h>
+      vfs: {
+        'main.c': {
+          type: 'file',
+          parent: '',
+          content: `#include <stdio.h>
 #include <stdlib.h>
 
 int main() {
     int n = 5;
     int *arr = (int *)malloc(n * sizeof(int));
-    if (arr == NULL) {
-        printf("Memory allocation failed!\\n");
-        return 1;
-    }
+    if (!arr) return 1;
 
-    for (int i = 0; i < n; i++) {
-        *(arr + i) = (i + 1) * 10;
-    }
+    for (int i = 0; i < n; i++) *(arr + i) = (i + 1) * 10;
 
     printf("Dynamic Allocation & Pointer Traversal:\\n");
     for (int i = 0; i < n; i++) {
-        printf("arr[%d] at address %p = %d\\n", i, (void *)(arr + i), *(arr + i));
+        printf("arr[%d] at %p = %d\\n", i, (void *)(arr + i), *(arr + i));
     }
 
     free(arr);
     return 0;
 }
 `
+        }
       },
       stdin: ''
     },
     bubble_sort: {
       compiler: 'gcc-15',
-      files: {
-        'main.c': `#include <stdio.h>
+      vfs: {
+        'main.c': {
+          type: 'file',
+          parent: '',
+          content: `#include <stdio.h>
 
 void bubbleSort(int arr[], int n) {
     for (int i = 0; i < n - 1; i++) {
         for (int j = 0; j < n - i - 1; j++) {
             if (arr[j] > arr[j + 1]) {
-                int temp = arr[j];
+                int t = arr[j];
                 arr[j] = arr[j + 1];
-                arr[j + 1] = temp;
+                arr[j + 1] = t;
             }
         }
     }
@@ -266,206 +267,361 @@ int main() {
     int arr[] = {64, 34, 25, 12, 22, 11, 90};
     int n = sizeof(arr) / sizeof(arr[0]);
 
-    printf("Original array: ");
+    printf("Original: ");
     for (int i = 0; i < n; i++) printf("%d ", arr[i]);
     printf("\\n");
 
     bubbleSort(arr, n);
 
-    printf("Sorted array:   ");
+    printf("Sorted:   ");
     for (int i = 0; i < n; i++) printf("%d ", arr[i]);
     printf("\\n");
     return 0;
 }
 `
+        }
       },
       stdin: ''
     }
   };
 
-  // State Management
-  let projectFiles = { ...SAMPLES.hello.files };
-  let activeFileName = 'main.c';
+  // State
+  let vfs = JSON.parse(JSON.stringify(SAMPLES.folders_project.vfs));
+  let expandedFolders = new Set(['include', 'src']);
+  let openTabs = ['main.c', 'include/math_utils.h'];
+  let activeFilePath = 'main.c';
   let monacoEditor = null;
 
   // DOM Elements
   const sampleSelect = document.getElementById('sample-select');
   const compilerSelect = document.getElementById('compiler-select');
   const runBtn = document.getElementById('run-btn');
-  const resetBtn = document.getElementById('reset-btn');
   const downloadBtn = document.getElementById('download-btn');
   const formatBtn = document.getElementById('format-btn');
   const copyCodeBtn = document.getElementById('copy-code-btn');
-  const clearStdinBtn = document.getElementById('clear-stdin-btn');
-  const copyOutputBtn = document.getElementById('copy-output-btn');
-  const clearOutputBtn = document.getElementById('clear-output-btn');
-  const stdinInput = document.getElementById('stdin-input');
-  const outputConsole = document.getElementById('output-console');
-  const metricsBar = document.getElementById('metrics-bar');
-  const metricStatus = document.getElementById('metric-status');
-  const metricExitCode = document.getElementById('metric-exit-code');
-  const metricTime = document.getElementById('metric-time');
-  const metricMemory = document.getElementById('metric-memory');
-  const loadingOverlay = document.getElementById('loading-overlay');
-  const cursorPosElem = document.getElementById('editor-cursor-pos');
+  const fileTree = document.getElementById('file-tree');
+  const editorTabs = document.getElementById('editor-tabs');
+  const activeCrumb = document.getElementById('active-crumb');
+  const windowTitle = document.getElementById('window-title');
+  const monacoContainer = document.getElementById('monaco-container');
   const fallbackEditor = document.getElementById('fallback-editor');
-  const editorContainer = document.getElementById('editor-container');
-  const fileTabsBar = document.getElementById('file-tabs-bar');
-  const addFileBtn = document.getElementById('add-file-btn');
+  const outputTerminal = document.getElementById('output-terminal');
+  const stdinInput = document.getElementById('stdin-input');
+  const problemsList = document.getElementById('problems-list');
+  const problemsCount = document.getElementById('problems-count');
+  const statusCursor = document.getElementById('status-cursor');
+  const statusErrorCount = document.getElementById('status-error-count');
+  const statusWarnCount = document.getElementById('status-warn-count');
+  const statusLangText = document.getElementById('status-lang-text');
+  const statusCompilerText = document.getElementById('status-compiler-text');
+  const bottomPanel = document.getElementById('bottom-panel');
+  const togglePanelBtn = document.getElementById('toggle-panel-btn');
+  const clearTerminalBtn = document.getElementById('clear-terminal-btn');
+  const maximizePanelBtn = document.getElementById('maximize-panel-btn');
+  const closePanelBtn = document.getElementById('close-panel-btn');
+  const btnNewFile = document.getElementById('btn-new-file');
+  const btnNewFolder = document.getElementById('btn-new-folder');
+  const btnRefresh = document.getElementById('btn-refresh');
+  const btnCollapse = document.getElementById('btn-collapse');
+  const statStatus = document.getElementById('stat-status');
+  const statExit = document.getElementById('stat-exit');
+  const statTime = document.getElementById('stat-time');
+  const statMemory = document.getElementById('stat-memory');
 
-  // Detect file language for Monaco
-  function getLanguageForFile(filename) {
-    const lower = filename.toLowerCase();
+  // Helpers
+  function getBasename(path) {
+    const parts = path.split('/');
+    return parts[parts.length - 1];
+  }
+
+  function getLanguage(path) {
+    const lower = path.toLowerCase();
     if (lower.endsWith('.c') || lower.endsWith('.h')) return 'c';
     if (lower === 'makefile' || lower.endsWith('.mk')) return 'makefile';
-    if (lower.endsWith('.sh') || lower.endsWith('.bash')) return 'shell';
+    if (lower.endsWith('.sh')) return 'shell';
+    if (lower.endsWith('.json')) return 'json';
     return 'plaintext';
   }
 
-  // Get icon class for file
-  function getFileIconClass(filename) {
+  function getFileIcon(filename) {
     const lower = filename.toLowerCase();
-    if (lower.endsWith('.h')) return 'header-file';
-    if (lower === 'makefile' || lower.endsWith('.mk')) return 'make-file';
-    if (lower.endsWith('.sh') || lower.endsWith('.bash')) return 'sh-file';
-    return '';
+    if (lower.endsWith('.c')) return '<i class="codicon codicon-symbol-class tree-icon icon-c"></i>';
+    if (lower.endsWith('.h')) return '<i class="codicon codicon-symbol-interface tree-icon icon-h"></i>';
+    if (lower === 'makefile' || lower.endsWith('.mk')) return '<i class="codicon codicon-gear tree-icon icon-make"></i>';
+    return '<i class="codicon codicon-file tree-icon"></i>';
   }
 
-  // Render Tabs
+  // File Tree Rendering
+  function renderFileTree() {
+    fileTree.innerHTML = '';
+
+    // Group items by parent
+    const tree = {};
+    for (const [path, item] of Object.entries(vfs)) {
+      const parent = item.parent || '';
+      if (!tree[parent]) tree[parent] = [];
+      tree[parent].push({ path, ...item });
+    }
+
+    // Sort items: folders first, then alphabetical
+    for (const parent in tree) {
+      tree[parent].sort((a, b) => {
+        if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+        return a.path.localeCompare(b.path);
+      });
+    }
+
+    function renderBranch(parentPath, depth) {
+      const items = tree[parentPath] || [];
+      items.forEach(item => {
+        const node = document.createElement('div');
+        node.className = `tree-node ${item.path === activeFilePath ? 'selected' : ''}`;
+        node.style.paddingLeft = `${depth * 14 + 10}px`;
+
+        if (item.type === 'folder') {
+          const isExpanded = expandedFolders.has(item.path);
+          const arrowIcon = isExpanded ? 'chevron-down' : 'chevron-right';
+          const folderIcon = isExpanded ? 'folder-opened' : 'folder';
+
+          node.innerHTML = `
+            <span class="tree-arrow"><i class="codicon codicon-${arrowIcon}"></i></span>
+            <span class="tree-icon icon-folder"><i class="codicon codicon-${folderIcon}"></i></span>
+            <span class="tree-label">${getBasename(item.path)}</span>
+            <div class="tree-node-actions">
+              <button class="node-action-btn btn-add-in-folder" title="New file in folder"><i class="codicon codicon-new-file"></i></button>
+              <button class="node-action-btn btn-delete-node" title="Delete folder"><i class="codicon codicon-trash"></i></button>
+            </div>
+          `;
+
+          node.addEventListener('click', (e) => {
+            if (e.target.closest('.node-action-btn')) return;
+            if (expandedFolders.has(item.path)) {
+              expandedFolders.delete(item.path);
+            } else {
+              expandedFolders.add(item.path);
+            }
+            renderFileTree();
+          });
+
+          const addBtn = node.querySelector('.btn-add-in-folder');
+          addBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            promptNewFile(item.path);
+          });
+
+          const delBtn = node.querySelector('.btn-delete-node');
+          delBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteNode(item.path, 'folder');
+          });
+
+          fileTree.appendChild(node);
+
+          if (isExpanded) {
+            renderBranch(item.path, depth + 1);
+          }
+        } else {
+          node.innerHTML = `
+            <span class="tree-arrow"></span>
+            ${getFileIcon(item.path)}
+            <span class="tree-label">${getBasename(item.path)}</span>
+            <div class="tree-node-actions">
+              <button class="node-action-btn btn-delete-node" title="Delete file"><i class="codicon codicon-trash"></i></button>
+            </div>
+          `;
+
+          node.addEventListener('click', (e) => {
+            if (e.target.closest('.node-action-btn')) return;
+            openFile(item.path);
+          });
+
+          const delBtn = node.querySelector('.btn-delete-node');
+          delBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteNode(item.path, 'file');
+          });
+
+          fileTree.appendChild(node);
+        }
+      });
+    }
+
+    renderBranch('', 0);
+  }
+
+  // Open / Switch File
+  function openFile(path) {
+    if (!vfs[path] || vfs[path].type !== 'file') return;
+
+    // Save active file content before switching
+    if (vfs[activeFilePath] && vfs[activeFilePath].type === 'file') {
+      vfs[activeFilePath].content = getEditorValue();
+    }
+
+    // Add to open tabs if not present
+    if (!openTabs.includes(path)) {
+      openTabs.push(path);
+    }
+
+    activeFilePath = path;
+    setEditorValue(vfs[path].content || '', path);
+
+    // Update breadcrumbs and titles
+    activeCrumb.textContent = path.replace(/\//g, ' › ');
+    windowTitle.textContent = `${getBasename(path)} — MyOnlineC [VS Code]`;
+    statusLangText.textContent = getLanguage(path).toUpperCase();
+
+    renderTabs();
+    renderFileTree();
+  }
+
+  // Render Tabs Bar
   function renderTabs() {
-    fileTabsBar.innerHTML = '';
-    const filenames = Object.keys(projectFiles);
-
-    filenames.forEach(filename => {
+    editorTabs.innerHTML = '';
+    openTabs.forEach(path => {
       const tab = document.createElement('div');
-      tab.className = `file-tab ${filename === activeFileName ? 'active' : ''}`;
-      tab.title = filename;
+      tab.className = `editor-tab ${path === activeFilePath ? 'active' : ''}`;
+      tab.title = path;
 
-      const icon = document.createElement('span');
-      const iconType = getFileIconClass(filename);
-      icon.className = `file-icon ${iconType}`;
+      tab.innerHTML = `
+        ${getFileIcon(path)}
+        <span class="tab-label">${getBasename(path)}</span>
+        <span class="tab-close"><i class="codicon codicon-close"></i></span>
+      `;
 
-      if (filename.toLowerCase().endsWith('.h')) {
-        icon.textContent = 'h';
-      } else if (filename.toLowerCase() === 'makefile' || filename.toLowerCase().endsWith('.mk')) {
-        icon.textContent = 'mk';
-      } else if (filename.toLowerCase().endsWith('.sh')) {
-        icon.textContent = 'sh';
-      } else {
-        icon.textContent = 'c';
-      }
-
-      const name = document.createElement('span');
-      name.className = 'file-name';
-      name.textContent = filename;
-
-      tab.appendChild(icon);
-      tab.appendChild(name);
-
-      // Only allow closing non-main files
-      if (filename !== 'main.c') {
-        const closeBtn = document.createElement('span');
-        closeBtn.className = 'file-close-btn';
-        closeBtn.innerHTML = '&times;';
-        closeBtn.title = `Remove ${filename}`;
-        closeBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          deleteFile(filename);
-        });
-        tab.appendChild(closeBtn);
-      }
-
-      tab.addEventListener('click', () => {
-        switchFile(filename);
+      tab.addEventListener('click', (e) => {
+        if (e.target.closest('.tab-close')) return;
+        openFile(path);
       });
 
-      fileTabsBar.appendChild(tab);
+      const closeBtn = tab.querySelector('.tab-close');
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeTab(path);
+      });
+
+      editorTabs.appendChild(tab);
     });
   }
 
-  // Switch Active File
-  function switchFile(newFileName) {
-    if (newFileName === activeFileName) return;
+  // Close Tab
+  function closeTab(path) {
+    const idx = openTabs.indexOf(path);
+    if (idx === -1) return;
 
-    // Save current editor content
-    projectFiles[activeFileName] = getEditorValue();
+    openTabs.splice(idx, 1);
 
-    // Switch active
-    activeFileName = newFileName;
-    setEditorValue(projectFiles[activeFileName] || '', newFileName);
-    renderTabs();
-  }
-
-  // Delete a file
-  function deleteFile(filename) {
-    if (filename === 'main.c') return;
-    if (confirm(`Remove file "${filename}"?`)) {
-      delete projectFiles[filename];
-      if (activeFileName === filename) {
-        activeFileName = 'main.c';
-        setEditorValue(projectFiles['main.c'] || '', 'main.c');
+    if (activeFilePath === path) {
+      if (openTabs.length > 0) {
+        const nextPath = openTabs[Math.max(0, idx - 1)];
+        openFile(nextPath);
+      } else {
+        activeFilePath = '';
+        setEditorValue('', '');
+        activeCrumb.textContent = '';
+        windowTitle.textContent = 'MyOnlineC [VS Code]';
+        renderTabs();
       }
+    } else {
       renderTabs();
     }
   }
 
-  // Add a new file
-  addFileBtn.addEventListener('click', function () {
-    const fileCount = Object.keys(projectFiles).length;
-    if (fileCount >= 8) {
-      alert('Maximum 8 files allowed per project by the compiler sandbox.');
-      return;
-    }
+  // New File Creator
+  function promptNewFile(parentFolder = '') {
+    const defaultName = parentFolder ? `${parentFolder}/utils.h` : 'helper.h';
+    const filePath = prompt('Enter new file name (or path with folder):', defaultName);
+    if (!filePath) return;
 
-    const filename = prompt('Enter new file name (e.g., utils.h, helper.c, Makefile):');
-    if (!filename) return;
-
-    const trimmed = filename.trim();
+    const trimmed = filePath.trim().replace(/^[\/\\]+|[\/\\]+$/g, '');
     if (!trimmed) return;
 
-    if (projectFiles[trimmed] !== undefined) {
-      alert(`File "${trimmed}" already exists.`);
-      switchFile(trimmed);
+    if (vfs[trimmed]) {
+      alert(`Item "${trimmed}" already exists.`);
+      openFile(trimmed);
       return;
     }
 
-    // Default template based on extension
-    let initialContent = '';
-    if (trimmed.endsWith('.h')) {
-      const guard = trimmed.toUpperCase().replace(/[^A-Z0-9]/g, '_');
-      initialContent = `#ifndef ${guard}\n#define ${guard}\n\n// Add header declarations here\n\n#endif // ${guard}\n`;
-    } else if (trimmed === 'Makefile') {
-      initialContent = `CC = gcc\nCFLAGS = -Wall -O2\n\nall:\n\t$(CC) $(CFLAGS) -o app main.c\n`;
-    } else if (trimmed.endsWith('.c')) {
-      initialContent = `#include <stdio.h>\n\n// Helper functions\n`;
+    // Ensure parent folders exist in VFS
+    const parts = trimmed.split('/');
+    if (parts.length > 1) {
+      let currentPath = '';
+      for (let i = 0; i < parts.length - 1; i++) {
+        currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
+        if (!vfs[currentPath]) {
+          const parentOfFolder = i > 0 ? parts.slice(0, i).join('/') : '';
+          vfs[currentPath] = { type: 'folder', parent: parentOfFolder };
+          expandedFolders.add(currentPath);
+        }
+      }
     }
 
-    // Save current active content
-    projectFiles[activeFileName] = getEditorValue();
+    const parentOfNewFile = parts.length > 1 ? parts.slice(0, parts.length - 1).join('/') : '';
+    vfs[trimmed] = {
+      type: 'file',
+      parent: parentOfNewFile,
+      content: trimmed.endsWith('.h') ? `#ifndef ${getBasename(trimmed).toUpperCase().replace(/[^A-Z0-9]/g, '_')}\n#define ${getBasename(trimmed).toUpperCase().replace(/[^A-Z0-9]/g, '_')}\n\n// Header declarations\n\n#endif\n` : ''
+    };
 
-    // Insert new file
-    projectFiles[trimmed] = initialContent;
-    activeFileName = trimmed;
-    setEditorValue(initialContent, trimmed);
-    renderTabs();
-  });
+    openFile(trimmed);
+  }
 
+  // New Folder Creator
+  function promptNewFolder() {
+    const folderName = prompt('Enter new folder name (e.g. include, src, tests):');
+    if (!folderName) return;
+
+    const trimmed = folderName.trim().replace(/^[\/\\]+|[\/\\]+$/g, '');
+    if (!trimmed) return;
+
+    if (vfs[trimmed]) {
+      alert(`Folder "${trimmed}" already exists.`);
+      return;
+    }
+
+    vfs[trimmed] = { type: 'folder', parent: '' };
+    expandedFolders.add(trimmed);
+    renderFileTree();
+  }
+
+  // Delete Node
+  function deleteNode(path, type) {
+    if (path === 'main.c') {
+      alert('main.c is the primary entry point and cannot be deleted.');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${type} "${path}"?`)) return;
+
+    if (type === 'folder') {
+      for (const key of Object.keys(vfs)) {
+        if (key === path || key.startsWith(`${path}/`)) {
+          delete vfs[key];
+          closeTab(key);
+        }
+      }
+      expandedFolders.delete(path);
+    } else {
+      delete vfs[path];
+      closeTab(path);
+    }
+
+    renderFileTree();
+  }
+
+  // Editor Value Setters/Getters
   function getEditorValue() {
-    if (monacoEditor) {
-      return monacoEditor.getValue();
-    }
+    if (monacoEditor) return monacoEditor.getValue();
     return fallbackEditor.value;
   }
 
-  function setEditorValue(val, filename) {
+  function setEditorValue(val, path) {
     if (monacoEditor) {
       monacoEditor.setValue(val);
-      if (filename) {
-        const lang = getLanguageForFile(filename);
+      if (path) {
+        const lang = getLanguage(path);
         const model = monacoEditor.getModel();
-        if (model) {
-          monaco.editor.setModelLanguage(model, lang);
-        }
+        if (model) monaco.editor.setModelLanguage(model, lang);
       }
     } else {
       fallbackEditor.value = val;
@@ -473,188 +629,153 @@ int main() {
   }
 
   // Initialize Monaco Editor
-  function initEditor() {
-    const initialCode = projectFiles[activeFileName] || '';
+  function initMonaco() {
+    const initialCode = vfs[activeFilePath]?.content || '';
     fallbackEditor.value = initialCode;
 
     if (window.require && typeof window.require.config === 'function') {
       window.require.config({
-        paths: {
-          vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs'
-        }
+        paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' }
       });
 
       window.require(['vs/editor/editor.main'], function () {
         fallbackEditor.style.display = 'none';
 
-        monacoEditor = monaco.editor.create(editorContainer, {
+        monacoEditor = monaco.editor.create(monacoContainer, {
           value: initialCode,
-          language: getLanguageForFile(activeFileName),
+          language: getLanguage(activeFilePath),
           theme: 'vs-dark',
           fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
-          fontSize: 14,
-          lineHeight: 22,
+          fontSize: 13.5,
+          lineHeight: 21,
           automaticLayout: true,
           tabSize: 4,
           insertSpaces: true,
-          minimap: { enabled: false },
+          minimap: { enabled: true, maxColumn: 80 },
           scrollBeyondLastLine: false,
           smoothScrolling: true,
           cursorBlinking: 'smooth',
-          renderWhitespace: 'selection'
+          renderWhitespace: 'selection',
+          bracketPairColorization: { enabled: true }
         });
 
         monacoEditor.onDidChangeCursorPosition(function (e) {
-          cursorPosElem.textContent = `Ln ${e.position.lineNumber}, Col ${e.position.column}`;
+          statusCursor.textContent = `Ln ${e.position.lineNumber}, Col ${e.position.column}`;
         });
 
         monacoEditor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, function () {
           runCode();
         });
       }, function (err) {
-        console.warn('Monaco CDN failed to load, keeping fallback editor.', err);
+        console.warn('Monaco failed to load, keeping native editor.', err);
       });
     }
 
-    fallbackEditor.addEventListener('keyup', updateFallbackCursor);
-    fallbackEditor.addEventListener('click', updateFallbackCursor);
+    renderFileTree();
     renderTabs();
   }
 
-  function updateFallbackCursor() {
-    const text = fallbackEditor.value.substring(0, fallbackEditor.selectionStart);
-    const lines = text.split('\n');
-    const lineNum = lines.length;
-    const colNum = lines[lines.length - 1].length + 1;
-    cursorPosElem.textContent = `Ln ${lineNum}, Col ${colNum}`;
+  // Bottom Panel Tab Switching
+  const panelTabs = document.querySelectorAll('.panel-tab');
+  panelTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      panelTabs.forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+
+      tab.classList.add('active');
+      const targetId = `pane-${tab.dataset.tab}`;
+      document.getElementById(targetId)?.classList.add('active');
+    });
+  });
+
+  function switchPanelTab(tabName) {
+    panelTabs.forEach(t => {
+      if (t.dataset.tab === tabName) t.classList.add('active');
+      else t.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-pane').forEach(p => {
+      if (p.id === `pane-${tabName}`) p.classList.add('active');
+      else p.classList.remove('active');
+    });
   }
 
-  // Load sample code
-  sampleSelect.addEventListener('change', function () {
-    const key = sampleSelect.value;
-    const sample = SAMPLES[key];
-    if (sample) {
-      projectFiles = { ...sample.files };
-      activeFileName = 'main.c';
-      if (sample.compiler) {
-        compilerSelect.value = sample.compiler;
-      }
-      setEditorValue(projectFiles['main.c'], 'main.c');
-      if (sample.stdin !== undefined) {
-        stdinInput.value = sample.stdin;
-      }
-      renderTabs();
+  // Parse Compiler Problems
+  function parseProblems(errorOutput) {
+    problemsList.innerHTML = '';
+    const regex = /(?:code\.c|main\.c|([a-zA-Z0-9_\-\.]+)):(\d+):(\d+):\s+(fatal error|error|warning):\s+(.+)/g;
+    let match;
+    let count = 0;
+
+    while ((match = regex.exec(errorOutput)) !== null) {
+      count++;
+      const file = match[1] || 'main.c';
+      const line = parseInt(match[2], 10);
+      const col = parseInt(match[3], 10);
+      const type = match[4];
+      const message = match[5];
+
+      const item = document.createElement('div');
+      item.className = 'problem-item';
+      item.innerHTML = `
+        <i class="codicon codicon-${type === 'warning' ? 'warning' : 'error'} problem-icon"></i>
+        <span class="problem-text">${escapeHtml(message)}</span>
+        <span class="problem-location">[${file}:${line}:${col}]</span>
+      `;
+
+      item.addEventListener('click', () => {
+        if (monacoEditor) {
+          monacoEditor.revealLineInCenter(line);
+          monacoEditor.setPosition({ lineNumber: line, column: col });
+          monacoEditor.focus();
+        }
+      });
+
+      problemsList.appendChild(item);
     }
-  });
 
-  // Reset to current sample
-  resetBtn.addEventListener('click', function () {
-    const key = sampleSelect.value;
-    const sample = SAMPLES[key] || SAMPLES.hello;
-    projectFiles = { ...sample.files };
-    activeFileName = 'main.c';
-    if (sample.compiler) {
-      compilerSelect.value = sample.compiler;
+    problemsCount.textContent = count;
+    statusErrorCount.textContent = count;
+
+    if (count === 0) {
+      problemsList.innerHTML = '<div class="no-problems">No problems detected in the current build.</div>';
     }
-    setEditorValue(projectFiles['main.c'], 'main.c');
-    stdinInput.value = sample.stdin || '';
-    renderTabs();
-  });
+  }
 
-  // Download active file
-  downloadBtn.addEventListener('click', function () {
-    projectFiles[activeFileName] = getEditorValue();
-    const code = projectFiles[activeFileName];
-    const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = activeFileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  });
-
-  // Format code
-  formatBtn.addEventListener('click', function () {
-    if (monacoEditor) {
-      monacoEditor.getAction('editor.action.formatDocument')?.run();
-    }
-  });
-
-  // Copy code
-  copyCodeBtn.addEventListener('click', async function () {
-    try {
-      projectFiles[activeFileName] = getEditorValue();
-      await navigator.clipboard.writeText(projectFiles[activeFileName]);
-      const prev = copyCodeBtn.textContent;
-      copyCodeBtn.textContent = 'Copied!';
-      setTimeout(() => { copyCodeBtn.textContent = prev; }, 1500);
-    } catch (err) {
-      console.error('Clipboard copy failed:', err);
-    }
-  });
-
-  // Clear Stdin
-  clearStdinBtn.addEventListener('click', function () {
-    stdinInput.value = '';
-    stdinInput.focus();
-  });
-
-  // Copy Output
-  copyOutputBtn.addEventListener('click', async function () {
-    try {
-      await navigator.clipboard.writeText(outputConsole.innerText);
-      const prev = copyOutputBtn.textContent;
-      copyOutputBtn.textContent = 'Copied!';
-      setTimeout(() => { copyOutputBtn.textContent = prev; }, 1500);
-    } catch (err) {
-      console.error('Clipboard copy failed:', err);
-    }
-  });
-
-  // Clear Output
-  clearOutputBtn.addEventListener('click', function () {
-    outputConsole.innerHTML = '<code class="console-placeholder">Terminal cleared. Click "Run" to compile again.</code>';
-    metricsBar.classList.add('hidden');
-  });
-
-  // Execute Code via /api/run
+  // Code Execution Engine
   async function runCode() {
-    projectFiles[activeFileName] = getEditorValue();
+    if (vfs[activeFilePath]) {
+      vfs[activeFilePath].content = getEditorValue();
+    }
 
-    const mainCode = projectFiles['main.c'] || projectFiles[activeFileName];
-    const input = stdinInput.value;
+    const mainFile = vfs['main.c'] || vfs[activeFilePath];
+    const mainCode = mainFile?.content || '';
     const compiler = compilerSelect.value || 'gcc-15';
+    const input = stdinInput.value;
 
-    if (!mainCode || !mainCode.trim()) {
-      alert('Please enter code to compile.');
+    if (!mainCode.trim()) {
+      alert('Please enter C code to compile.');
       return;
     }
 
-    // Build secondary files array
+    // Collect all other files (extracting clean basenames)
     const secondaryFiles = [];
-    for (const [name, content] of Object.entries(projectFiles)) {
-      if (name !== 'main.c') {
+    for (const [path, item] of Object.entries(vfs)) {
+      if (item.type === 'file' && path !== 'main.c') {
         secondaryFiles.push({
-          name: name,
-          content: content
+          name: getBasename(path),
+          content: item.content
         });
       }
     }
 
-    // Set UI to loading state
     runBtn.disabled = true;
-    loadingOverlay.classList.remove('hidden');
-    outputConsole.innerHTML = '<span class="stdout-text">Compiling and executing in sandbox...</span>';
+    switchPanelTab('terminal');
+    outputTerminal.innerHTML = '<span class="stdout-line">Compiling and executing in sandbox...</span>';
 
     try {
       const response = await fetch('/api/run', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           compiler: compiler,
           code: mainCode,
@@ -665,110 +786,138 @@ int main() {
       });
 
       const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        const errorMsg = result.error || 'Compilation or execution failed.';
-        outputConsole.innerHTML = `<span class="stderr-text">Error:\n${escapeHtml(errorMsg)}</span>`;
-        if (result.details && result.details.output) {
-          outputConsole.innerHTML += `\n<span class="stdout-text">${escapeHtml(result.details.output)}</span>`;
-        }
-        showMetrics({
-          status: 'Failed',
-          exitCode: result.details?.exit_code ?? -1,
-          time: result.details?.time ? `${result.details.time}s` : '-',
-          memory: '-'
-        }, false);
-        return;
-      }
-
       const data = result.data || {};
       const stdout = data.output || '';
-      const stderr = data.error || '';
-      const exitCode = data.exit_code !== undefined ? data.exit_code : 0;
+      const stderr = data.error || result.error || '';
+      const exitCode = data.exit_code !== undefined ? data.exit_code : (result.success ? 0 : 1);
       const isSuccess = exitCode === 0 && (!data.status || data.status === 'success');
 
-      let renderedHtml = '';
-      if (stdout) {
-        renderedHtml += `<span class="stdout-text">${escapeHtml(stdout)}</span>`;
-      }
+      let outputHtml = '';
+      if (stdout) outputHtml += `<span class="stdout-line">${escapeHtml(stdout)}</span>`;
       if (stderr) {
-        if (renderedHtml) renderedHtml += '\n';
-        renderedHtml += `<span class="stderr-text">${escapeHtml(stderr)}</span>`;
+        if (outputHtml) outputHtml += '\n';
+        outputHtml += `<span class="stderr-line">${escapeHtml(stderr)}</span>`;
       }
       if (!stdout && !stderr) {
-        renderedHtml = `<span class="console-placeholder">[Program finished with no output (Exit Code: ${exitCode})]</span>`;
+        outputHtml = '<span class="terminal-placeholder">[Program terminated with no output]</span>';
       }
 
-      outputConsole.innerHTML = renderedHtml;
+      outputTerminal.innerHTML = outputHtml;
 
-      // Format memory
-      let memDisplay = '-';
-      if (data.memory) {
-        const kb = parseInt(data.memory, 10);
-        if (!isNaN(kb)) {
-          memDisplay = kb > 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${kb} KB`;
-        }
+      // Parse problems
+      parseProblems(stderr);
+
+      // Update Stats
+      statStatus.textContent = isSuccess ? 'Success' : 'Error';
+      statStatus.className = `stat-value ${isSuccess ? 'status-success' : 'status-error'}`;
+      statExit.textContent = exitCode;
+      statTime.textContent = data.time ? `${(parseFloat(data.time) * 1000).toFixed(0)} ms` : (data.total ? `${(parseFloat(data.total) * 1000).toFixed(0)} ms` : '-');
+      statMemory.textContent = data.memory ? `${parseInt(data.memory, 10)} KB` : '-';
+
+      // Auto-switch to problems tab if errors exist
+      if (!isSuccess && stderr.includes('error:')) {
+        // keep terminal but show problems count
       }
-
-      // Format time
-      let timeDisplay = '-';
-      if (data.time) {
-        timeDisplay = `${(parseFloat(data.time) * 1000).toFixed(0)} ms`;
-      } else if (data.total) {
-        timeDisplay = `${(parseFloat(data.total) * 1000).toFixed(0)} ms`;
-      }
-
-      showMetrics({
-        status: isSuccess ? 'Success' : 'Error',
-        exitCode: exitCode,
-        time: timeDisplay,
-        memory: memDisplay
-      }, isSuccess);
 
     } catch (err) {
-      console.error('Run failed:', err);
-      outputConsole.innerHTML = `<span class="stderr-text">Network or Server Error: ${escapeHtml(err.message)}</span>`;
-      showMetrics({
-        status: 'Error',
-        exitCode: -1,
-        time: '-',
-        memory: '-'
-      }, false);
+      outputTerminal.innerHTML = `<span class="stderr-line">Network error: ${escapeHtml(err.message)}</span>`;
+      statStatus.textContent = 'Network Error';
+      statStatus.className = 'stat-value status-error';
     } finally {
       runBtn.disabled = false;
-      loadingOverlay.classList.add('hidden');
     }
-  }
-
-  function showMetrics(metrics, isSuccess) {
-    metricsBar.classList.remove('hidden');
-    metricStatus.textContent = metrics.status;
-    metricStatus.className = `metric-value status-badge ${isSuccess ? 'success' : 'error'}`;
-    metricExitCode.textContent = metrics.exitCode;
-    metricTime.textContent = metrics.time;
-    metricMemory.textContent = metrics.memory;
   }
 
   function escapeHtml(str) {
     if (!str) return '';
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  // Global Keyboard Shortcuts
-  window.addEventListener('keydown', function (e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      e.preventDefault();
-      runCode();
+  // Template Loader
+  sampleSelect.addEventListener('change', () => {
+    const sample = SAMPLES[sampleSelect.value];
+    if (sample) {
+      vfs = JSON.parse(JSON.stringify(sample.vfs));
+      openTabs = ['main.c'];
+      if (vfs['include/math_utils.h']) openTabs.push('include/math_utils.h');
+      expandedFolders = new Set(['include', 'src']);
+      activeFilePath = 'main.c';
+      if (sample.compiler) compilerSelect.value = sample.compiler;
+      setEditorValue(vfs['main.c']?.content || '', 'main.c');
+      stdinInput.value = sample.stdin || '';
+      renderFileTree();
+      renderTabs();
     }
+  });
+
+  // Compiler Selector
+  compilerSelect.addEventListener('change', () => {
+    statusCompilerText.textContent = compilerSelect.value === 'gcc-15' ? 'GCC 15' : 'Clang 21';
+  });
+
+  // Toolbar Actions
+  btnNewFile.addEventListener('click', () => promptNewFile(''));
+  btnNewFolder.addEventListener('click', promptNewFolder);
+  btnRefresh.addEventListener('click', renderFileTree);
+  btnCollapse.addEventListener('click', () => {
+    expandedFolders.clear();
+    renderFileTree();
   });
 
   runBtn.addEventListener('click', runCode);
 
-  // Initialize
-  initEditor();
+  downloadBtn.addEventListener('click', () => {
+    if (vfs[activeFilePath]) {
+      vfs[activeFilePath].content = getEditorValue();
+      const blob = new Blob([vfs[activeFilePath].content], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = getBasename(activeFilePath);
+      a.click();
+    }
+  });
+
+  formatBtn.addEventListener('click', () => {
+    if (monacoEditor) monacoEditor.getAction('editor.action.formatDocument')?.run();
+  });
+
+  copyCodeBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(getEditorValue());
+      alert('File contents copied to clipboard!');
+    } catch (e) {
+      console.error(e);
+    }
+  });
+
+  clearTerminalBtn.addEventListener('click', () => {
+    outputTerminal.innerHTML = '<span class="terminal-placeholder">Terminal cleared.</span>';
+  });
+
+  maximizePanelBtn.addEventListener('click', () => {
+    bottomPanel.classList.toggle('maximized');
+  });
+
+  closePanelBtn.addEventListener('click', () => {
+    bottomPanel.classList.add('hidden');
+  });
+
+  togglePanelBtn.addEventListener('click', () => {
+    bottomPanel.classList.toggle('hidden');
+  });
+
+  // Global Keyboard Shortcuts
+  window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      e.preventDefault();
+      runCode();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === '`') {
+      e.preventDefault();
+      bottomPanel.classList.toggle('hidden');
+    }
+  });
+
+  // Start IDE
+  initMonaco();
 })();

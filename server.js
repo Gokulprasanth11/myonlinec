@@ -157,7 +157,11 @@ const server = http.createServer(async (req, res) => {
       };
 
       if (files.length > 0) {
-        requestPayload.files = files;
+        // OnlineCompiler.io requires plain filenames without slashes
+        requestPayload.files = files.map(f => ({
+          name: path.basename(f.name || 'file.txt'),
+          content: typeof f.content === 'string' ? f.content : ''
+        }));
       }
 
       console.log(`[EXEC] Compiler: ${compiler} | Code: ${code.length} chars | Extra files: ${files.length} (${files.map(f => f.name).join(', ') || 'none'})`);
