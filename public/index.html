@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyOnlineC - Modern Online C Compiler</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="dark-theme">
+  <div class="app-container">
+    <!-- Top Navigation Bar -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo">
+          <span class="logo-icon">C</span>
+          <span class="logo-title">MyOnline<span class="highlight">C</span></span>
+        </div>
+        <div class="badge-tag">GCC 15</div>
+      </div>
+
+      <div class="header-center">
+        <div class="control-group">
+          <label for="sample-select">Template:</label>
+          <select id="sample-select" title="Load sample code">
+            <option value="hello">Hello, World!</option>
+            <option value="sum">Sum of Two Numbers (stdin)</option>
+            <option value="fibonacci">Fibonacci Series</option>
+            <option value="pointers">Pointers & Memory</option>
+            <option value="bubble_sort">Bubble Sort</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="compiler-select">Compiler:</label>
+          <select id="compiler-select" title="Select C compiler">
+            <option value="gcc-15" selected>GCC 15</option>
+            <option value="clang-21">Clang 21</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button id="download-btn" class="btn btn-secondary" title="Download C source file">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export .c
+        </button>
+        <button id="reset-btn" class="btn btn-secondary" title="Reset to template">
+          Reset
+        </button>
+        <button id="run-btn" class="btn btn-primary" title="Execute program (Ctrl + Enter)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          <span>Run</span>
+          <span class="shortcut-pill">Ctrl+↵</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace Split -->
+    <main class="workspace">
+      <!-- Editor Column -->
+      <section class="editor-pane">
+        <div class="pane-header">
+          <div class="file-tab active">
+            <span class="file-icon">c</span>
+            <span class="file-name">main.c</span>
+          </div>
+          <div class="editor-actions">
+            <button id="format-btn" class="icon-btn" title="Format code">Format</button>
+            <button id="copy-code-btn" class="icon-btn" title="Copy code to clipboard">Copy</button>
+          </div>
+        </div>
+        
+        <div id="editor-container" class="editor-body">
+          <!-- Fallback textarea for when Monaco is loading or offline -->
+          <textarea id="fallback-editor" spellcheck="false" placeholder="// Write your C code here..."></textarea>
+        </div>
+
+        <div class="editor-statusbar">
+          <div class="status-left">
+            <span id="editor-cursor-pos">Ln 1, Col 1</span>
+            <span class="separator">|</span>
+            <span id="editor-encoding">UTF-8</span>
+            <span class="separator">|</span>
+            <span>C (C17 / C23)</span>
+          </div>
+          <div class="status-right">
+            <span>Powered by OnlineCompiler.io</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sidebar Column (Input & Output) -->
+      <section class="output-pane">
+        <!-- Input section -->
+        <div class="io-box input-box">
+          <div class="pane-header">
+            <div class="pane-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+              <span>Standard Input (stdin)</span>
+            </div>
+            <button id="clear-stdin-btn" class="icon-btn" title="Clear input">Clear</button>
+          </div>
+          <textarea id="stdin-input" placeholder="Type standard input here for programs using scanf() or getchar()..."></textarea>
+        </div>
+
+        <!-- Output section -->
+        <div class="io-box output-box">
+          <div class="pane-header">
+            <div class="pane-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+              <span>Terminal Output</span>
+            </div>
+            <div class="header-actions">
+              <button id="copy-output-btn" class="icon-btn" title="Copy output">Copy</button>
+              <button id="clear-output-btn" class="icon-btn" title="Clear terminal">Clear</button>
+            </div>
+          </div>
+
+          <!-- Execution Metrics Banner -->
+          <div id="metrics-bar" class="metrics-bar hidden">
+            <div class="metric-item">
+              <span class="metric-label">Status:</span>
+              <span id="metric-status" class="metric-value status-badge">Ready</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Exit Code:</span>
+              <span id="metric-exit-code" class="metric-value">-</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Time:</span>
+              <span id="metric-time" class="metric-value">-</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Memory:</span>
+              <span id="metric-memory" class="metric-value">-</span>
+            </div>
+          </div>
+
+          <!-- Output Display Area -->
+          <div class="output-console-wrapper">
+            <pre id="output-console"><code class="console-placeholder">Click "Run" or press Ctrl+Enter to compile and run your code.</code></pre>
+            <div id="loading-overlay" class="loading-overlay hidden">
+              <div class="spinner"></div>
+              <span>Compiling & Executing...</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Monaco Editor Loader from CDN with seamless fallback -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
