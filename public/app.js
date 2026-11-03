@@ -406,6 +406,7 @@ int main() {
   let activeFilePath = firstOpenPath(vfs);
   let openTabs = [activeFilePath];
   let expandedFolders = folderSet(vfs);
+  let termCwd = activeFilePath.includes('/') ? activeFilePath.slice(0, activeFilePath.lastIndexOf('/')) : '';
   let monacoEditor = null;
   let cliHistory = [];
   let cliHistoryIdx = -1;
@@ -625,9 +626,11 @@ int main() {
     }
 
     activeFilePath = path;
+    termCwd = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
     setEditorValue(vfs[path].content || '', path);
 
     activeCrumb.textContent = path.replace(/\//g, ' › ');
+    updateTerminalPrompt();
     statusLangText.textContent = getLanguage(path).toUpperCase();
 
     renderTabs();
@@ -1106,6 +1109,51 @@ int main() {
     }
   }
 
+  function directoryOf(path) {
+    const slash = String(path || '').lastIndexOf('/');
+    return slash === -1 ? '' : path.slice(0, slash);
+  }
+
+  function terminalPathLabel() {
+    if (activeFilePath && vfs[activeFilePath]?.type === 'file' && directoryOf(activeFilePath) === termCwd) {
+      return `~/project/${activeFilePath}`;
+    }
+    return termCwd ? `~/project/${termCwd}` : '~/project';
+  }
+
+  function updateTerminalPrompt() {
+    const el = document.getElementById('terminal-prompt-path');
+    if (el) el.textContent = terminalPathLabel();
+  }
+
+  function resolveTermPath(input) {
+    const raw = String(input || '').trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    const stack = termCwd ? termCwd.split('/') : [];
+    if (!raw || raw === '.') return stack.join('/');
+    raw.split('/').forEach((part) => {
+      if (!part || part === '.') return;
+      if (part === '..') stack.pop();
+      else stack.push(part);
+    });
+    return stack.join('/');
+  }
+
+  function listTermDir(dir) {
+    const prefix = dir ? `${dir}/` : '';
+    const kids = [];
+    Object.entries(vfs).forEach(([path, item]) => {
+      if (!path.startsWith(prefix)) return;
+      const rest = path.slice(prefix.length);
+      if (!rest || rest.includes('/')) return;
+      kids.push({ name: rest, type: item.type });
+    });
+    kids.sort((a, b) => {
+      if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+    return kids;
+  }
+
   // Interactive Terminal Command Line Handler
   terminalCliInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -1116,7 +1164,7 @@ int main() {
       cliHistory.push(cmdRaw);
       cliHistoryIdx = cliHistory.length;
 
-      appendTerminal(`<div class="terminal-prompt-line"><span class="prompt-user">gokul@myonlinec</span>:<span class="prompt-path">~/project</span>$&nbsp;<span>${escapeHtml(cmdRaw)}</span></div>`);
+      appendTerminal(`<div class="terminal-prompt-line"><span class="prompt-user">gokul@myonlinec</span>:<span class="prompt-path">${escapeHtml(terminalPathLabel())}</span>$&nbsp;<span>${escapeHtml(cmdRaw)}</span></div>`);
 
       executeCliCommand(cmdRaw);
     } else if (e.key === 'ArrowUp') {
@@ -1148,7 +1196,10 @@ int main() {
   <span class="prompt-user">run [file|folder]</span> - Compile one application. Shared .c files are included; other mains are not
   <span class="prompt-user">git push</span>         - Push all project files & folders to GitHub
   <span class="prompt-user">git status</span>       - View files in virtual project tree
-  <span class="prompt-user">ls / dir</span>         - List files and folders
+  <span class="prompt-user">cd &lt;folder&gt;</span>     - Enter a folder. The prompt shows that path
+  <span class="prompt-user">cd ..</span>            - Go up one folder
+  <span class="prompt-user">ls / dir</span>         - List the current folder
+  <span class="prompt-user">pwd</span>             - Show the current file or folder path
   <span class="prompt-user">mkdir &lt;folder&gt;</span>    - Create new folder in project
   <span class="prompt-user">touch &lt;file&gt;</span>      - Create new file in project
   <span class="prompt-user">cat &lt;file&gt;</span>        - Display contents of a file
@@ -1157,24 +1208,56 @@ int main() {
         break;
 
       case 'run':
-        runCode(arg1);
+        runCode(arg1 ? resolveTermPath(arg1) : undefined);
         break;
+
+      case 'pwd':
+        appendTerminal(`<span class="stdout-line">${escapeHtml(terminalPathLabel())}</span>\n`);
+        break;
+
+      case 'cd': {
+        if (!arg1 || arg1 === '~' || arg1 === '/') {
+          termCwd = '';
+          updateTerminalPrompt();
+          break;
+        }
+        const dest = resolveTermPath(arg1);
+        if (!dest) {
+          termCwd = '';
+          updateTerminalPrompt();
+          break;
+        }
+        if (vfs[dest]?.type !== 'folder') {
+          appendTerminal(`<span class="stderr-line">cd: ${escapeHtml(arg1)}: No such folder</span>\n`);
+          break;
+        }
+        termCwd = dest;
+        const entry = vfs[`${dest}/main.c`]?.type === 'file' ? `${dest}/main.c` : '';
+        if (entry) openFile(entry);
+        else updateTerminalPrompt();
+        break;
+      }
 
       case 'clear':
         outputTerminal.innerHTML = '';
         break;
 
       case 'ls':
-      case 'dir':
-        const fileNames = Object.keys(vfs).sort();
+      case 'dir': {
+        const kids = listTermDir(termCwd);
+        if (!kids.length) {
+          appendTerminal('<span class="stdout-line">(empty)</span>\n');
+          break;
+        }
         let listOut = '<div style="margin: 4px 0;">';
-        fileNames.forEach(name => {
-          const isDir = vfs[name].type === 'folder';
-          listOut += `<span style="display:inline-block; margin-right: 18px; color: ${isDir ? '#e8a838' : '#519aba'};">${escapeHtml(name)}${isDir ? '/' : ''}</span>`;
+        kids.forEach((kid) => {
+          const isDir = kid.type === 'folder';
+          listOut += `<span style="display:inline-block; margin-right: 18px; color: ${isDir ? '#e8a838' : '#519aba'};">${escapeHtml(kid.name)}${isDir ? '/' : ''}</span>`;
         });
         listOut += '</div>\n';
         appendTerminal(listOut);
         break;
+      }
 
       case 'git':
         if (arg1 === 'status') {
@@ -1192,37 +1275,68 @@ ${Object.keys(vfs).map(p => `  <span style="color: #89d185;">${escapeHtml(p)}</s
         }
         break;
 
-      case 'mkdir':
+      case 'mkdir': {
         if (!arg1) {
           appendTerminal('<span class="stderr-line">mkdir: missing operand</span>\n');
-        } else if (promptNewFolder(arg1)) {
-          appendTerminal(`<span class="stdout-line">Created directory: ${escapeHtml(arg1)}</span>\n`);
-        } else if (vfs[arg1]) {
-          appendTerminal(`<span class="stderr-line">mkdir: cannot create '${escapeHtml(arg1)}': File exists</span>\n`);
+          break;
+        }
+        const folderPath = resolveTermPath(arg1);
+        if (promptNewFolder(folderPath)) {
+          appendTerminal(`<span class="stdout-line">Created directory: ${escapeHtml(folderPath)}</span>\n`);
+        } else if (vfs[folderPath]) {
+          appendTerminal(`<span class="stderr-line">mkdir: cannot create '${escapeHtml(folderPath)}': File exists</span>\n`);
         }
         break;
+      }
 
-      case 'touch':
+      case 'touch': {
         if (!arg1) {
           appendTerminal('<span class="stderr-line">touch: missing file operand</span>\n');
-        } else {
-          vfs[arg1] = { type: 'file', parent: arg1.includes('/') ? arg1.split('/')[0] : '', content: '' };
-          saveVfs();
-          renderFileTree();
-          openFile(arg1);
-          appendTerminal(`<span class="stdout-line">Created file: ${escapeHtml(arg1)}</span>\n`);
+          break;
         }
+        const filePath = resolveTermPath(arg1);
+        if (vfs[filePath]?.type === 'folder') {
+          appendTerminal(`<span class="stderr-line">touch: ${escapeHtml(filePath)}: Is a directory</span>\n`);
+          break;
+        }
+        if (!vfs[filePath]) {
+          const parts = filePath.split('/');
+          let currentPath = '';
+          for (let i = 0; i < parts.length - 1; i++) {
+            currentPath = currentPath ? `${currentPath}/${parts[i]}` : parts[i];
+            if (!vfs[currentPath]) {
+              vfs[currentPath] = { type: 'folder', parent: i > 0 ? parts.slice(0, i).join('/') : '' };
+            }
+            expandedFolders.add(currentPath);
+          }
+          vfs[filePath] = {
+            type: 'file',
+            parent: parts.length > 1 ? parts.slice(0, -1).join('/') : '',
+            content: ''
+          };
+          saveVfs();
+        }
+        renderFileTree();
+        openFile(filePath);
+        appendTerminal(`<span class="stdout-line">Created file: ${escapeHtml(filePath)}</span>\n`);
         break;
+      }
 
-      case 'cat':
-        if (!arg1 || !vfs[arg1]) {
-          appendTerminal(`<span class="stderr-line">cat: ${escapeHtml(arg1 || '')}: No such file</span>\n`);
-        } else if (vfs[arg1].type === 'folder') {
+      case 'cat': {
+        if (!arg1) {
+          appendTerminal('<span class="stderr-line">cat: missing file operand</span>\n');
+          break;
+        }
+        const filePath = resolveTermPath(arg1);
+        if (!vfs[filePath]) {
+          appendTerminal(`<span class="stderr-line">cat: ${escapeHtml(arg1)}: No such file</span>\n`);
+        } else if (vfs[filePath].type === 'folder') {
           appendTerminal(`<span class="stderr-line">cat: ${escapeHtml(arg1)}: Is a directory</span>\n`);
         } else {
-          appendTerminal(`<pre class="stdout-line">${escapeHtml(vfs[arg1].content || '(empty)')}</pre>\n`);
+          appendTerminal(`<pre class="stdout-line">${escapeHtml(vfs[filePath].content || '(empty)')}</pre>\n`);
         }
         break;
+      }
 
       default:
         appendTerminal(`<span class="stderr-line">command not found: ${escapeHtml(cmd)}. Type "help" for list of commands.</span>\n`);
@@ -1349,7 +1463,9 @@ ${Object.keys(vfs).map(p => `  <span style="color: #89d185;">${escapeHtml(p)}</s
       expandedFolders = folderSet(vfs);
       if (sample.compiler) compilerSelect.value = sample.compiler;
       setEditorValue(vfs[activeFilePath]?.content || '', activeFilePath);
+      termCwd = activeFilePath.includes('/') ? activeFilePath.slice(0, activeFilePath.lastIndexOf('/')) : '';
       if (activeCrumb) activeCrumb.textContent = activeFilePath.replace(/\//g, ' › ');
+      updateTerminalPrompt();
       stdinInput.value = sample.stdin || '';
       saveVfs();
       renderFileTree();
@@ -1457,7 +1573,9 @@ ${Object.keys(vfs).map(p => `  <span style="color: #89d185;">${escapeHtml(p)}</s
     openTabs = [activeFilePath];
     expandedFolders = folderSet(vfs);
     setEditorValue(vfs[activeFilePath]?.content || '', activeFilePath);
+    termCwd = activeFilePath.includes('/') ? activeFilePath.slice(0, activeFilePath.lastIndexOf('/')) : '';
     if (activeCrumb) activeCrumb.textContent = activeFilePath.replace(/\//g, ' › ');
+    updateTerminalPrompt();
     renderFileTree();
     renderTabs();
     renderProjectSelector();
@@ -1519,6 +1637,7 @@ ${Object.keys(vfs).map(p => `  <span style="color: #89d185;">${escapeHtml(p)}</s
   if (userDisplayEl) userDisplayEl.textContent = loggedInUser;
 
   renderProjectSelector();
+  updateTerminalPrompt();
 
   // Start IDE
   initMonaco();
