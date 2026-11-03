@@ -89,6 +89,42 @@ function sandboxFileName(name, used) {
   return candidate;
 }
 
+async function githubMessage(res) {
+  const data = await res.json().catch(() => ({}));
+  return data.message || data.error || '';
+}
+
+function githubRepoIsEmpty(status, message) {
+  return status === 409 && /repository is empty/i.test(message || '');
+}
+
+async function pushFilesIntoEmptyRepo(owner, repo, branch, message, files, headers) {
+  let lastCommitSha = null;
+  let committed = 0;
+  for (const file of files) {
+    const filePath = String(file.path || '').replace(/^[\/\\]+/, '').replace(/\\/g, '/');
+    if (!filePath || filePath.endsWith('/')) continue;
+    const text = typeof file.content === 'string' ? file.content : '';
+    const content = Buffer.from(text, 'utf8').toString('base64') || Buffer.from('\n', 'utf8').toString('base64');
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath.split('/').map(encodeURIComponent).join('/')}`;
+    const body = { message, content };
+    if (committed > 0) body.branch = branch;
+    let putRes = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body) });
+    if (!putRes.ok && committed === 0) {
+      putRes = await fetch(url, { method: 'PUT', headers, body: JSON.stringify({ message, content, branch }) });
+    }
+    if (!putRes.ok) {
+      const errText = await githubMessage(putRes);
+      throw new Error(errText || `Failed to add ${filePath}`);
+    }
+    const putData = await putRes.json();
+    lastCommitSha = putData.commit && putData.commit.sha;
+    committed += 1;
+  }
+  if (!lastCommitSha) throw new Error('No files were committed.');
+  return lastCommitSha;
+}
+
 // ---------------------------------------------------------------------------
 // MIME map & helpers
 // ---------------------------------------------------------------------------
@@ -358,21 +394,50 @@ const server = http.createServer(async (req, res) => {
         await new Promise(r => setTimeout(r, 1500));
       }
 
-      // Get latest commit SHA
+      const ownerName = owner.trim();
+      const repoName = repo.trim();
+      const branchName = branch.trim() || 'main';
+      const successBody = (commitSha) => ({
+        success: true,
+        repoUrl: `https://github.com/${ownerName}/${repoName}`,
+        commitUrl: `https://github.com/${ownerName}/${repoName}/commit/${commitSha}`,
+        commitSha
+      });
+
+      // Get latest commit SHA. An empty repo has no branch yet.
       let parentCommitSha = null, baseTreeSha = null;
-      const refRes = await fetch(`https://api.github.com/repos/${owner.trim()}/${repo.trim()}/git/ref/heads/${branch.trim()}`, { headers });
+      let repoIsEmpty = false;
+      const refRes = await fetch(`https://api.github.com/repos/${ownerName}/${repoName}/git/ref/heads/${branchName}`, { headers });
       if (refRes.ok) {
         const refData = await refRes.json();
         parentCommitSha = refData.object.sha;
-        const commitRes = await fetch(`https://api.github.com/repos/${owner.trim()}/${repo.trim()}/git/commits/${parentCommitSha}`, { headers });
+        const commitRes = await fetch(`https://api.github.com/repos/${ownerName}/${repoName}/git/commits/${parentCommitSha}`, { headers });
         if (commitRes.ok) { const cd = await commitRes.json(); baseTreeSha = cd.tree.sha; }
+      } else {
+        const refMessage = await githubMessage(refRes);
+        repoIsEmpty = githubRepoIsEmpty(refRes.status, refMessage);
+      }
+
+      if (repoIsEmpty) {
+        const commitSha = await pushFilesIntoEmptyRepo(ownerName, repoName, branchName, message, files, headers);
+        sendJson(res, 200, successBody(commitSha));
+        return;
       }
 
       // Create tree
       const treePayload = { tree: files.map(f => ({ path: f.path.replace(/^[\/\\]+/, ''), mode: '100644', type: 'blob', content: f.content })) };
       if (baseTreeSha) treePayload.base_tree = baseTreeSha;
-      const treeRes = await fetch(`https://api.github.com/repos/${owner.trim()}/${repo.trim()}/git/trees`, { method: 'POST', headers, body: JSON.stringify(treePayload) });
-      if (!treeRes.ok) { const e = await treeRes.json().catch(() => ({})); sendJson(res, 400, { success: false, error: e.message || 'Failed to create Git tree.' }); return; }
+      const treeRes = await fetch(`https://api.github.com/repos/${ownerName}/${repoName}/git/trees`, { method: 'POST', headers, body: JSON.stringify(treePayload) });
+      if (!treeRes.ok) {
+        const treeMessage = await githubMessage(treeRes);
+        if (githubRepoIsEmpty(treeRes.status, treeMessage)) {
+          const commitSha = await pushFilesIntoEmptyRepo(ownerName, repoName, branchName, message, files, headers);
+          sendJson(res, 200, successBody(commitSha));
+          return;
+        }
+        sendJson(res, 400, { success: false, error: treeMessage || 'Failed to create Git tree.' });
+        return;
+      }
       const treeData = await treeRes.json();
 
       // Create commit
