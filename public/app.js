@@ -132,14 +132,17 @@ int main() {
     hello: {
       compiler: 'gcc-15',
       vfs: {
-        'main.c': {
+        'src': {
+          type: 'folder',
+          parent: ''
+        },
+        'src/main.c': {
           type: 'file',
-          parent: '',
+          parent: 'src',
           content: `#include <stdio.h>
 
-int main() {
+int main(void) {
     printf("Hello, World!\\n");
-    printf("Welcome to MyOnlineC!\\n");
     return 0;
 }
 `
@@ -354,25 +357,55 @@ int main() {
   function loadProjectVfs(name) {
     try {
       const raw = localStorage.getItem(getVfsKey(name));
-      return raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(SAMPLES.folders_project.vfs));
-    } catch { return JSON.parse(JSON.stringify(SAMPLES.folders_project.vfs)); }
+      return raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(SAMPLES.hello.vfs));
+    } catch { return JSON.parse(JSON.stringify(SAMPLES.hello.vfs)); }
   }
 
   function saveProjectVfs(name, data) {
     try { localStorage.setItem(getVfsKey(name), JSON.stringify(data)); } catch (e) { console.warn(e); }
   }
 
+  function firstOpenPath(tree) {
+    if (tree['src/main.c']?.type === 'file') return 'src/main.c';
+    if (tree['main.c']?.type === 'file') return 'main.c';
+    const cFile = Object.keys(tree).find((k) => tree[k].type === 'file' && k.toLowerCase().endsWith('.c'));
+    if (cFile) return cFile;
+    const anyFile = Object.keys(tree).find((k) => tree[k].type === 'file');
+    return anyFile || 'src/main.c';
+  }
+
+  function folderSet(tree) {
+    const names = new Set();
+    Object.keys(tree).forEach((p) => {
+      if (tree[p].type === 'folder') names.add(p);
+    });
+    if (!names.size) names.add('src');
+    return names;
+  }
+
   let projectList    = getProjectList();
   let currentProject = localStorage.getItem(ACTIVE_PROJ_KEY) || projectList[0];
   if (!projectList.includes(currentProject)) { currentProject = projectList[0]; }
 
+  // First visit of this layout opens Hello World in src/main.c.
+  const STARTER_VERSION = 'src-hello-1';
+  if (localStorage.getItem('myonlinec_starter') !== STARTER_VERSION) {
+    if (!projectList.includes('Default Project')) {
+      projectList.unshift('Default Project');
+      saveProjectList(projectList);
+    }
+    saveProjectVfs('Default Project', JSON.parse(JSON.stringify(SAMPLES.hello.vfs)));
+    currentProject = 'Default Project';
+    localStorage.setItem(ACTIVE_PROJ_KEY, currentProject);
+    localStorage.setItem('myonlinec_starter', STARTER_VERSION);
+  }
+
   // State Management with LocalStorage persistence
   const savedVfs = localStorage.getItem(getVfsKey(currentProject));
-  let vfs = savedVfs ? JSON.parse(savedVfs) : JSON.parse(JSON.stringify(SAMPLES.folders_project.vfs));
-  let expandedFolders = new Set(['include', 'src', 'apps', 'apps/greet']);
-  let openTabs = ['main.c'];
-  if (vfs['include/math_utils.h']) openTabs.push('include/math_utils.h');
-  let activeFilePath = 'main.c';
+  let vfs = savedVfs ? JSON.parse(savedVfs) : JSON.parse(JSON.stringify(SAMPLES.hello.vfs));
+  let activeFilePath = firstOpenPath(vfs);
+  let openTabs = [activeFilePath];
+  let expandedFolders = folderSet(vfs);
   let monacoEditor = null;
   let cliHistory = [];
   let cliHistoryIdx = -1;
@@ -387,6 +420,7 @@ int main() {
   const fileTree = document.getElementById('file-tree');
   const editorTabs = document.getElementById('editor-tabs');
   const activeCrumb = document.getElementById('active-crumb');
+  if (activeCrumb) activeCrumb.textContent = activeFilePath.replace(/\//g, ' › ');
   const monacoContainer = document.getElementById('monaco-container');
   const fallbackEditor = document.getElementById('fallback-editor');
   const outputTerminal = document.getElementById('output-terminal');
@@ -653,7 +687,7 @@ int main() {
 
   // New File Creator
   function promptNewFile(parentFolder = '', initialContent = '') {
-    const defaultName = parentFolder ? `${parentFolder}/utils.h` : 'helper.h';
+    const defaultName = parentFolder ? `${parentFolder}/program.c` : 'src/program.c';
     const filePath = prompt('Enter new file name (or path with folder):', defaultName);
     if (!filePath) return;
 
@@ -1310,12 +1344,12 @@ ${Object.keys(vfs).map(p => `  <span style="color: #89d185;">${escapeHtml(p)}</s
     const sample = SAMPLES[sampleSelect.value];
     if (sample) {
       vfs = JSON.parse(JSON.stringify(sample.vfs));
-      openTabs = ['main.c'];
-      if (vfs['include/math_utils.h']) openTabs.push('include/math_utils.h');
-      expandedFolders = new Set(['include', 'src', 'apps', 'apps/greet']);
-      activeFilePath = 'main.c';
+      activeFilePath = firstOpenPath(vfs);
+      openTabs = [activeFilePath];
+      expandedFolders = folderSet(vfs);
       if (sample.compiler) compilerSelect.value = sample.compiler;
-      setEditorValue(vfs['main.c']?.content || '', 'main.c');
+      setEditorValue(vfs[activeFilePath]?.content || '', activeFilePath);
+      if (activeCrumb) activeCrumb.textContent = activeFilePath.replace(/\//g, ' › ');
       stdinInput.value = sample.stdin || '';
       saveVfs();
       renderFileTree();
@@ -1419,11 +1453,11 @@ ${Object.keys(vfs).map(p => `  <span style="color: #89d185;">${escapeHtml(p)}</s
     currentProject = name;
     localStorage.setItem(ACTIVE_PROJ_KEY, name);
     vfs = loadProjectVfs(name);
-    openTabs = ['main.c'].filter(p => vfs[p]);
-    if (!openTabs.length) openTabs = [Object.keys(vfs).find(k => vfs[k].type === 'file') || 'main.c'];
-    activeFilePath = openTabs[0];
-    expandedFolders = new Set(['include', 'src', 'apps', 'apps/greet']);
+    activeFilePath = firstOpenPath(vfs);
+    openTabs = [activeFilePath];
+    expandedFolders = folderSet(vfs);
     setEditorValue(vfs[activeFilePath]?.content || '', activeFilePath);
+    if (activeCrumb) activeCrumb.textContent = activeFilePath.replace(/\//g, ' › ');
     renderFileTree();
     renderTabs();
     renderProjectSelector();
