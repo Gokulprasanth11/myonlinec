@@ -1138,6 +1138,16 @@ int main() {
     return stack.join('/');
   }
 
+  function findTermFolder(input) {
+    const raw = String(input || '').trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+    if (!raw || raw === '.' || raw === '..' || raw.includes('..')) return resolveTermPath(raw);
+    const relative = resolveTermPath(raw);
+    if (vfs[relative]?.type === 'folder') return relative;
+    if (vfs[raw]?.type === 'folder') return raw;
+    const matches = Object.keys(vfs).filter((p) => vfs[p].type === 'folder' && (p === raw || p.endsWith(`/${raw}`)));
+    return matches.length === 1 ? matches[0] : relative;
+  }
+
   function listTermDir(dir) {
     const prefix = dir ? `${dir}/` : '';
     const kids = [];
@@ -1221,14 +1231,14 @@ int main() {
           updateTerminalPrompt();
           break;
         }
-        const dest = resolveTermPath(arg1);
+        const dest = findTermFolder(arg1);
         if (!dest) {
           termCwd = '';
           updateTerminalPrompt();
           break;
         }
         if (vfs[dest]?.type !== 'folder') {
-          appendTerminal(`<span class="stderr-line">cd: ${escapeHtml(arg1)}: No such folder</span>\n`);
+          appendTerminal(`<span class="stderr-line">cd: ${escapeHtml(arg1)}: No such folder. Type ls to see this folder.</span>\n`);
           break;
         }
         termCwd = dest;
